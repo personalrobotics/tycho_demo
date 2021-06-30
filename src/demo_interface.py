@@ -30,6 +30,7 @@ sys.path = [dir_path] + sys.path
 
 # Custom functions
 from moving import add_moving_function
+from recording import add_recording_function
 from tuning import add_tuning_function
 
 # Feedback frequency (100 * x) Hz
@@ -335,9 +336,7 @@ def run(demo_rosnode_name='hebi_demo', callback_func=None):
   # Examples of installing new functions
   add_moving_function(state)
   add_recording_function(state)
-  add_replay_function(state)
   add_tuning_function(state)
-  add_visualize_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:
