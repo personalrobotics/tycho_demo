@@ -135,3 +135,6 @@ dmypy.json
 # MAC
 .DS_Store
 .vscode
+
+recording
+controller*
