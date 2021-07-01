@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>tycho_demo</name>
+  <name>tycho_demo_ros</name>
   <version>1.0.0</version>
   <description>Hebi Demo Base Package</description>
 

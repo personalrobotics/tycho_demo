@@ -314,7 +314,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run(demo_rosnode_name='hebi_demo', callback_func=None):
+def run(callback_func=None):
   state, _, _ = init_robotarm()
 
   # Basic demo functions
@@ -345,8 +345,6 @@ def run(demo_rosnode_name='hebi_demo', callback_func=None):
   state.handlers_keys = state.handlers.keys()
   state.mode_keys = state.modes.keys()
 
-  rospy.init_node(demo_rosnode_name)
-
   # command is sent out via a separate thread
   cmd_thread = Thread(target=command_proc, name='Command Thread', args=(state,))
   cmd_thread.start()
@@ -373,4 +371,5 @@ def run(demo_rosnode_name='hebi_demo', callback_func=None):
     func(state)
 
 if __name__ == '__main__':
+  rospy.init_node('tycho_demo_test')
   run()
