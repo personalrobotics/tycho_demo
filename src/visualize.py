@@ -76,13 +76,13 @@ def init_tip_fk_error_publisher(state):
     if not state.quit():
       pos_in_optitrack = [data.point.x, data.point.y, data.point.z, 1]
       pos_in_optitrack = np.array(pos_in_optitrack).reshape(4,1)
-      pos_in_hebi = get_transformation_matrix_from_quat(R_OPTITRACK2BASE).dot(pos_in_optitrack)
-      pos_in_hebi = np.array(pos_in_hebi[0:3]).reshape(3,1)
+      pos_in_robot = get_transformation_matrix_from_quat(R_OPTITRACK2BASE).dot(pos_in_optitrack)
+      pos_in_robot = np.array(pos_in_robot[0:3]).reshape(3,1)
       list_jp = [state.current_position]
       fk_tip = get_fk_tips(list_jp)[0]
-      tip_error = pos_in_hebi - fk_tip.reshape(3,1)
+      tip_error = pos_in_robot - fk_tip.reshape(3,1)
       text='FK error: {:2.3f} (mm)'.format(np.linalg.norm(tip_error) * 1000)
-      text_pos = np.array(pos_in_hebi).reshape(-1)
+      text_pos = np.array(pos_in_robot).reshape(-1)
       text_pos[0] -= 0.1
       text_pos[1] += 0.1
       state.error_publisher.update(text_pos, text)

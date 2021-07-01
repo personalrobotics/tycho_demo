@@ -25,7 +25,7 @@ rigid_bodies:
         #child_frame_id: chop/base_link
         #parent_frame_id: map
 markers:
-    # The order of points matter (because hebi_demo makes assumption about the order of points)
+    # The order of points matter (because the demo code makes assumption about the order of points)
     # However, the yaml load module will sort the items by their entry keys (e.g. from A to Z)
     # Pay attention to not change the resulted order when you change the names
     # In optitrack frame, look up the coordinate in Motive Software and paste here directly!
