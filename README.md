@@ -1,10 +1,11 @@
-# Hebi Demo
+# Tycho Demo
 
-The base demo interface for our chopsticks robot.
+The base demo interface for our chopsticks robot, Tycho (Thank You CHOpsticks).
 
 ## Getting Started
 
 ```bash
 $ ./launch/start_demo.sh
-$ python src/demo_interface.py
+$ python src/launch_demo.py
 ```
+
