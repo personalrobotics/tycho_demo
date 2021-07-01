@@ -73,7 +73,7 @@ def init_tip_fk_error_publisher(state):
   state.error_publisher = TextPublisher('/FK_error')
   def callback(data):
     state.lock()
-    if not state.quit():
+    if not state.quit:
       pos_in_optitrack = [data.point.x, data.point.y, data.point.z, 1]
       pos_in_optitrack = np.array(pos_in_optitrack).reshape(4,1)
       pos_in_robot = get_transformation_matrix_from_quat(R_OPTITRACK2BASE).dot(pos_in_optitrack)

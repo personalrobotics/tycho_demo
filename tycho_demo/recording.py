@@ -6,6 +6,9 @@
 # - 'r' to record
 # - 'D' to delete the last record (can only delete one last record)
 # - 'R' to count the number of recordings in the folder
+#
+# To change the topics to record, edit state.ros_record_topics before you press the record button
+# It's a list of topic names.
 #######################################################################
 
 import os
