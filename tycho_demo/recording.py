@@ -24,11 +24,6 @@ FNULL = open(os.devnull, 'w')
 ROSBAG_PROC = []
 DEFAULT_CAMERAS = ['435','415_1','415_2']
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-SAVE_RECORD_FOLDER = os.path.join(dir_path, '..', 'recording')
-if SAVE_RECORD_FOLDER is not '' and not os.path.isdir(SAVE_RECORD_FOLDER):
-  os.mkdir(SAVE_RECORD_FOLDER)
-
 def add_recording_function(state):
   state.handlers['r'] = _record
   state.handlers['D'] = _delete_recording
@@ -41,6 +36,14 @@ def add_recording_function(state):
       '/Ball/point',
       ]
   state.onclose.append(_stop_recording_on_quit)
+
+  if hasattr(state, "save_record_folder") and state.save_record_folder is not None:
+    SAVE_RECORD_FOLDER = state.save_record_folder
+  else:
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    SAVE_RECORD_FOLDER = os.path.join(dir_path, '..', 'recording')
+  if SAVE_RECORD_FOLDER != '' and not os.path.isdir(SAVE_RECORD_FOLDER):
+    os.mkdir(SAVE_RECORD_FOLDER)
 
 def _record(key, state):
   if state.rosbag_recording_to: # Stop recording if it has been running

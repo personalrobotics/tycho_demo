@@ -1,6 +1,10 @@
 from __future__ import print_function
 
-import sys, os
+import sys; sys.path.append("/usr/lib/python3/dist-packages")
+# The above line enables the conda python interpreter to access ROS packages
+# Even if ROS installs the packages to the system python
+
+import os
 from time import time, sleep
 import numpy as np
 
@@ -24,7 +28,7 @@ from hebi_env.utils import (
 from hebi_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
-from keyboard import getch
+from .keyboard import getch
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path = [dir_path] + sys.path
 
@@ -314,7 +318,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run(callback_func=None):
+def run(callback_func=None, recording_path=None):
   state, _, _ = init_robotarm()
 
   # Basic demo functions
@@ -332,6 +336,8 @@ def run(callback_func=None):
   state.handlers = handlers
   state.modes = modes
   state.onclose = onclose
+
+  state.save_record_folder = recording_path
 
   # Examples of installing new functions
   add_moving_function(state)

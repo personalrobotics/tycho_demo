@@ -24,7 +24,7 @@ def add_replay_function(state):
 def _replay(key, state):
   state.lock()
   global REPLAY_INIT_THREAD
-  if (state.mode is not 'replay' and
+  if (state.mode != 'replay' and
       (REPLAY_INIT_THREAD is None or not REPLAY_INIT_THREAD.isAlive())):
     print_and_cr("Entering replay mode ... initializing ...")
     state.mode = 'wait_for_replay'
