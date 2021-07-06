@@ -19,16 +19,22 @@ from sensor_msgs.msg import JointState
 # HEBI
 import hebi
 
-from hebi_env import arm_container, Smoother, HebiController
-from hebi_env.utils import (
+# Residual estimator import
+import torch
+from tycho_env import ResEstimator
+from tycho_env.utils import get_res_estimator_path
+
+
+from tycho_env import arm_container, Smoother, HebiController
+from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
   euler_angles_from_rotation_matrix)
 # Import Constant
-from hebi_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
+from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
-from .keyboard import getch
+from keyboard import getch
 dir_path = os.path.dirname(os.path.realpath(__file__))
 sys.path = [dir_path] + sys.path
 
@@ -47,8 +53,8 @@ DEFAULT_CAMERAS = ['435', '415_1', '415_2']
 # Rospy publisher and subscriber
 #######################################################################
 
-joint_state_publisher = rospy.Publisher('/joint_states', JointState, queue_size=1)
-joint_command_publisher = rospy.Publisher('/joint_commands', JointState, queue_size=1)
+joint_state_publisher = rospy.Publisher('/joint_states', JointState, queue_size=2)
+joint_command_publisher = rospy.Publisher('/joint_commands', JointState, queue_size=2)
 
 #######################################################################
 # Store robot state and send command in a multi-thread safe way
@@ -223,6 +229,12 @@ def command_proc(state):
     # Update feedback
     feedback.get_position(state.current_position)
     state.current_position += OFFSET_JOINTS
+    if state.correct_residue:
+      joints = state.current_position.astype(np.float32)[:6]
+      backlash = state.res_estimator.estimate_backlash(joints)
+      backlash = backlash.detach().cpu().numpy().squeeze()
+      state.uncorrected_pos = state.current_position.copy()
+      state.current_position[:6] += backlash
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
     state.ee_pose = state.arm.get_FK_ee(state.current_position)
@@ -307,6 +319,27 @@ def _print_state(key, state):
   state.print_state = True
   state.unlock()
 
+def _toggle_res_estim(key, state):
+  if state.res_estimator is not None:
+    state.lock()
+    state.uncorrected_pos = None
+    correct_residue = not state.correct_residue
+    print_and_cr("Turning residual estimation %s" % ("on" if correct_residue else "off"))
+    state.correct_residue = correct_residue
+    state.unlock()
+  else:
+    print_and_cr("No residual estimator loaded, so cannot toggle estimation!")
+
+def _print_help(key, state):
+  print_and_cr("Keypress Handlers:")
+  keys = sorted(state.handlers.keys())
+  for k in keys:
+    print_and_cr("\t%s - %s" % (k, state.handlers[k].__name__.replace("_", " ").strip()))
+  print_and_cr("Modes:")
+  modes = sorted(state.modes.keys())
+  for m in modes:
+    print_and_cr("\t%s" % m)
+
 # ------------------------------------------------------------------------------
 # Modes Handler
 # ------------------------------------------------------------------------------
@@ -321,6 +354,16 @@ def __idle(state, curr_time):
 def run(callback_func=None, recording_path=None):
   state, _, _ = init_robotarm()
 
+  res_estimator_path = get_res_estimator_path()
+  if os.path.isfile(res_estimator_path):
+    print_and_cr("Loading residual estimator from %s" % res_estimator_path)
+    device = torch.device("cpu")
+    state.res_estimator = ResEstimator.static_load(res_estimator_path, device)
+    state.res_estimator.eval()
+  else:
+    print_and_cr("No residual estimator model found!")
+    state.res_estimator = None
+
   # Basic demo functions
   handlers = {}
   modes = {}
@@ -330,12 +373,15 @@ def run(callback_func=None, recording_path=None):
   handlers['z'] = _idle
   handlers['Z'] = _mute
   handlers['v'] = _print_state
+  handlers['o'] = _toggle_res_estim
+  handlers['h'] = _print_help
 
   modes['idle'] = __idle
 
   state.handlers = handlers
   state.modes = modes
   state.onclose = onclose
+  state.correct_residue = state.res_estimator is not None
 
   state.save_record_folder = recording_path
 

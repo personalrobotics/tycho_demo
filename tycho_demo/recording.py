@@ -13,8 +13,8 @@
 
 import os
 
-import hebi_env
-from hebi_env.utils import print_and_cr, colors
+import tycho_env
+from tycho_env.utils import print_and_cr, colors
 from subprocess import Popen, STDOUT
 from multiprocessing import Process
 from time import strftime, localtime, sleep

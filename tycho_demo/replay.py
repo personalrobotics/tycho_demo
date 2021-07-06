@@ -1,7 +1,7 @@
 from threading import Lock, Thread
 import numpy as np
 from scipy.spatial.transform import Rotation as scipyR
-from hebi_env.utils import print_and_cr
+from tycho_env.utils import print_and_cr
 import rospy
 from sensor_msgs.msg import JointState
 

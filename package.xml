@@ -47,7 +47,7 @@
   <exec_depend>mocap_optitrack</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>realsense2-camera</exec_depend>
-  <depend>hebi_description</depend>
+  <depend>tycho_description</depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

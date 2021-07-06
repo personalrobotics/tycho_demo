@@ -10,7 +10,7 @@
 
 from functools import partial
 import hebi
-from hebi_env.utils import MOVING_POSITION, CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
+from tycho_env.utils import MOVING_POSITION, CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
 import numpy as np
 from time import time
 from functools import partial

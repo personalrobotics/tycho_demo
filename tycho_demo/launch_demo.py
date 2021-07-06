@@ -1,3 +1,4 @@
+import sys; sys.path.append("/usr/lib/python3/dist-packages")
 import rospy
 
 from demo_interface import run

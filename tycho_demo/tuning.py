@@ -1,4 +1,4 @@
-from hebi_env.utils import CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
+from tycho_env.utils import CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
 import numpy as np
 from time import time
 

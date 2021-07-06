@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   message_generation
   mocap_optitrack
-  hebi_description
+  tycho_description
   rospy
 )
 

@@ -1,6 +1,6 @@
 from time import strftime, localtime
 from multiprocessing import Process, Queue
-from hebi_env.utils import get_fk_tips, get_transformation_matrix_from_quat, \
+from tycho_env.utils import get_fk_tips, get_transformation_matrix_from_quat, \
   print_and_cr, R_OPTITRACK2BASE
 import numpy as np
 from utils import PointPublisher, TextPublisher
@@ -80,12 +80,21 @@ def init_tip_fk_error_publisher(state):
       pos_in_robot = np.array(pos_in_robot[0:3]).reshape(3,1)
       list_jp = [state.current_position]
       fk_tip = get_fk_tips(list_jp)[0]
-      tip_error = pos_in_robot - fk_tip.reshape(3,1)
-      text='FK error: {:2.3f} (mm)'.format(np.linalg.norm(tip_error) * 1000)
+      tip_error = np.linalg.norm(pos_in_robot - fk_tip.reshape(3,1))
+
+      text = 'FK error: {:2.3f} (mm)'.format(tip_error * 1000)
+      color = (1,1,1)
+      if hasattr(state, "uncorrected_pos") and state.uncorrected_pos is not None:
+        uncorrected_err = pos_in_robot - get_fk_tips([state.uncorrected_pos])[0].reshape((3,1))
+        uncorrected_err = np.linalg.norm(uncorrected_err)
+        text += "\nFK error (uncorrected): {:2.3f}".format(uncorrected_err * 1000)
+        improved = tip_error < uncorrected_err
+        color = (0,1,0) if improved else (1,0,0)
+
       text_pos = np.array(pos_in_robot).reshape(-1)
       text_pos[0] -= 0.1
       text_pos[1] += 0.1
-      state.error_publisher.update(text_pos, text)
+      state.error_publisher.update(text_pos, text, color=color)
     state.unlock()
   rospy.Subscriber('/Ball/point', PointStamped, callback, queue_size=10)
 
