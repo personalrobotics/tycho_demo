@@ -70,6 +70,7 @@ class State(object):
     self.publishers = []
     self.rosbag_recording_to = None
     self.controller_save_file = None
+    self.res_estimator = None
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -143,6 +144,16 @@ def init_robotarm():
   state = State(arm, controller_gains_xml_file)
   state.controller = HebiController(controller_gains_xml_file, False)
   return state, controller_gains_xml_file, directPWM_xml_file
+
+def setup_nn_residual(state):
+  model_path = get_res_estimator_path()
+  print_and_cr("Loading residual estimator from %s" % model_path)
+  try:
+    device = torch.device("cpu") # TODO check if GPU can speed up
+    state.res_estimator = ResEstimator.static_load(model_path, device)
+    state.res_estimator.eval()
+  except:
+    print_and_cr("Cannot load residual estimator model")
 
 #######################################################################
 # Control loop that sends command to the arm
@@ -229,12 +240,10 @@ def command_proc(state):
     # Update feedback
     feedback.get_position(state.current_position)
     state.current_position += OFFSET_JOINTS
-    if state.correct_residue:
-      joints = state.current_position.astype(np.float32)[:6]
-      backlash = state.res_estimator.estimate_backlash(joints)
-      backlash = backlash.detach().cpu().numpy().squeeze()
-      state.uncorrected_pos = state.current_position.copy()
-      state.current_position[:6] += backlash
+
+    if state.use_nn_backlash:
+      state.current_position[:6] += state.res_estimator.predict(state.current_position[0:6])
+
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
     state.ee_pose = state.arm.get_FK_ee(state.current_position)
@@ -319,16 +328,15 @@ def _print_state(key, state):
   state.print_state = True
   state.unlock()
 
-def _toggle_res_estim(key, state):
+def _toggle_nn_backlash(key, state):
+  state.lock()
   if state.res_estimator is not None:
-    state.lock()
-    state.uncorrected_pos = None
-    correct_residue = not state.correct_residue
-    print_and_cr("Turning residual estimation %s" % ("on" if correct_residue else "off"))
-    state.correct_residue = correct_residue
+    state.use_nn_backlash = not state.use_nn_backlash
+    print_and_cr("NN backlash is %s" %
+                ("on" if state.use_nn_backlash else "off"))
     state.unlock()
   else:
-    print_and_cr("No residual estimator loaded, so cannot toggle estimation!")
+    print_and_cr("Cannot turn on NN backlash: no model loaded")
 
 def _print_help(key, state):
   print_and_cr("Keypress Handlers:")
@@ -339,6 +347,7 @@ def _print_help(key, state):
   modes = sorted(state.modes.keys())
   for m in modes:
     print_and_cr("\t%s" % m)
+
 
 # ------------------------------------------------------------------------------
 # Modes Handler
@@ -353,16 +362,8 @@ def __idle(state, curr_time):
 
 def run(callback_func=None, recording_path=None):
   state, _, _ = init_robotarm()
-
-  res_estimator_path = get_res_estimator_path()
-  if os.path.isfile(res_estimator_path):
-    print_and_cr("Loading residual estimator from %s" % res_estimator_path)
-    device = torch.device("cpu")
-    state.res_estimator = ResEstimator.static_load(res_estimator_path, device)
-    state.res_estimator.eval()
-  else:
-    print_and_cr("No residual estimator model found!")
-    state.res_estimator = None
+  setup_nn_residual(state)
+  state.use_nn_backlash = False
 
   # Basic demo functions
   handlers = {}
@@ -373,7 +374,7 @@ def run(callback_func=None, recording_path=None):
   handlers['z'] = _idle
   handlers['Z'] = _mute
   handlers['v'] = _print_state
-  handlers['o'] = _toggle_res_estim
+  handlers['o'] = _toggle_nn_backlash
   handlers['h'] = _print_help
 
   modes['idle'] = __idle
@@ -381,7 +382,6 @@ def run(callback_func=None, recording_path=None):
   state.handlers = handlers
   state.modes = modes
   state.onclose = onclose
-  state.correct_residue = state.res_estimator is not None
 
   state.save_record_folder = recording_path
 
