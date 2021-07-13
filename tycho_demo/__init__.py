@@ -1,3 +1,5 @@
+from .keyboard import getch
+
 from .moving import add_moving_function
 from .recording import add_recording_function
 from .replay import add_replay_function
