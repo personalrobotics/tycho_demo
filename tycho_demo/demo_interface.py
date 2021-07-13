@@ -25,7 +25,7 @@ from tycho_env import ResEstimator
 from tycho_env.utils import get_res_estimator_path
 
 
-from tycho_env import arm_container, Smoother, HebiController
+from tycho_env import arm_container, Smoother, TychoController
 from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
@@ -35,9 +35,6 @@ from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from keyboard import getch
-dir_path = os.path.dirname(os.path.realpath(__file__))
-sys.path = [dir_path] + sys.path
-
 # Custom functions
 from moving import add_moving_function
 from recording import add_recording_function
@@ -142,7 +139,7 @@ def init_robotarm():
     raise
 
   state = State(arm, controller_gains_xml_file)
-  state.controller = HebiController(controller_gains_xml_file, False)
+  state.controller = TychoController(controller_gains_xml_file, False)
   return state, controller_gains_xml_file, directPWM_xml_file
 
 def setup_nn_residual(state):
