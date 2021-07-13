@@ -34,11 +34,11 @@ from tycho_env.utils import (
 from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
-from keyboard import getch
+from .keyboard import getch
 # Custom functions
-from moving import add_moving_function
-from recording import add_recording_function
-from tuning import add_tuning_function
+from .moving import add_moving_function
+from .recording import add_recording_function
+from .tuning import add_tuning_function
 
 # Feedback frequency (100 * x) Hz
 FEEDBACK_FREQUENCY = 5

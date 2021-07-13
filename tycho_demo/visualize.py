@@ -3,7 +3,7 @@ from multiprocessing import Process, Queue
 from tycho_env.utils import get_fk_tips, get_transformation_matrix_from_quat, \
   print_and_cr, R_OPTITRACK2BASE
 import numpy as np
-from utils import PointPublisher, TextPublisher
+from tycho_demo.utils import PointPublisher, TextPublisher
 import matplotlib.pyplot as plt
 import rospy
 from geometry_msgs.msg import PointStamped
