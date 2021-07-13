@@ -69,7 +69,7 @@ class ChopPublisher:
 
   def _make_chop_marker(self, my_id):
     marker = Marker()
-    marker.header.frame_id = "/optitrack"
+    marker.header.frame_id = "optitrack"
     # marker.header.stamp = rospy.Time.now()
     marker.ns = "chopstick"
     marker.id = my_id;
@@ -88,7 +88,7 @@ class ChopPublisher:
 
   def _make_point_marker(self, my_id):
     marker = Marker()
-    marker.header.frame_id = "/optitrack"
+    marker.header.frame_id = "optitrack"
     marker.header.stamp = rospy.Time.now()
     marker.ns = "chopstick"
     marker.id = my_id;
