@@ -37,13 +37,11 @@ def add_recording_function(state):
       ]
   state.onclose.append(_stop_recording_on_quit)
 
-  if hasattr(state, "save_record_folder") and state.save_record_folder is not None:
-    SAVE_RECORD_FOLDER = state.save_record_folder
-  else:
+  if (not hasattr(state, "save_record_folder")) or state.save_record_folder is None:
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    SAVE_RECORD_FOLDER = os.path.join(dir_path, '..', 'recording')
-  if SAVE_RECORD_FOLDER != '' and not os.path.isdir(SAVE_RECORD_FOLDER):
-    os.mkdir(SAVE_RECORD_FOLDER)
+    state.save_record_folder = os.path.join(dir_path, '..', 'recording')
+  if state.save_record_folder != '' and not os.path.isdir(state.save_record_folder):
+    os.mkdir(state.save_record_folder)
 
 def _record(key, state):
   if state.rosbag_recording_to: # Stop recording if it has been running
@@ -51,7 +49,7 @@ def _record(key, state):
     state.rosbag_recording_to = False
   else:                         # Start recording
     rosbag_recording_to = os.path.join(
-      SAVE_RECORD_FOLDER,
+      state.save_record_folder,
       strftime('%y-%m-%d-%H-%M-%S', localtime()))
     state.rosbag_recording_to = True
     state.last_rosbag = rosbag_recording_to
@@ -67,7 +65,7 @@ def _delete_recording(key, state):
     state.last_rosbag = None
 
 def _count_recording(key, state):
-  number_of_recordings = len( [f for f in os.listdir(SAVE_RECORD_FOLDER)
+  number_of_recordings = len( [f for f in os.listdir(state.save_record_folder)
     if f.endswith('-pose.bag')])
   print("Number of recordings:", number_of_recordings)
 

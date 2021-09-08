@@ -5,6 +5,7 @@ from scipy.spatial.transform import Rotation as scipyR
 from std_msgs.msg import ColorRGBA
 from geometry_msgs.msg import Pose, Point, Quaternion
 
+from tycho_env.utils import q_mult, q_inv
 from tycho_demo_ros.msg import ChopPose
 
 HALF_CHOPSTICKS_LENGTH_M = 0.23 / 2 	# For visualization purpose
@@ -43,18 +44,6 @@ def update_marker_pose(marker, pos, ori, w):
   marker.pose.orientation.z = z;
   marker.pose.orientation.w = w;
 
-def q_inv(quat):
-  w, x, y, z = quat
-  return np.array([w, -x, -y, -z])
-
-def q_mult(q1, q2):
-    w1, x1, y1, z1 = q1
-    w2, x2, y2, z2 = q2
-    w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2
-    x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2
-    y = w1 * y2 + y1 * w2 + z1 * x2 - x1 * z2
-    z = w1 * z2 + z1 * w2 + x1 * y2 - y1 * x2
-    return w, x, y, z
 
 class ChopPublisher:
 

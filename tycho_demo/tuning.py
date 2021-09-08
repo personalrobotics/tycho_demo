@@ -77,7 +77,7 @@ def __swing(state, cur_time):
     else:
       position[state.tuning_joint] += np.pi * 0.2 * \
         np.sin(cur_time - state.tuning_start_time)
-  return position
+  return position, [None] * 7
 
 def __step(state, cur_time):
   if state.tuning_joint is not None:
@@ -90,9 +90,9 @@ def __step(state, cur_time):
       state.fix_position[state.tuning_joint] += STEP_SIZE
     STEP_SIZE = -STEP_SIZE
     state.tuning_joint = None
-  return state.fix_position
+  return state.fix_position, [None] * 7
 
 def __rotate(state, cur_time):
   position = state.fix_position.copy()
   position[0] += (cur_time - state.tuning_start_time) * state.base_vel
-  return position
+  return position, [None] * 7

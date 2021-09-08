@@ -44,11 +44,12 @@ def __replay(state, cur_time):
   target_transform[0:3, 3] = [_p.x, _p.y, _p.z]
   target_transform[0:3,0:3] = scipyR.from_quat([_q.x, _q.y, _q.z, _q.w]).as_matrix()
   state._replay_lock.release()
-  return construct_command(state.arm, state.current_position,
+  pos_cmd = construct_command(state.arm, state.current_position,
                            target_transformation=target_transform, target_open=target_open)
+  return pos_cmd, [None] * 7
 
 def __wait_for_replay(state, cur_time):
-  return state.fix_position
+  return state.fix_position, [None] * 7
 
 def launch_replay_subscriber(state):
   print_and_cr('Launch Ros Subscriber for replaying ... ')

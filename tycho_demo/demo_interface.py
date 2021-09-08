@@ -79,6 +79,7 @@ class State(object):
 
     # For command
     self.command_position = [None] * 7
+    self.command_velocity = [None] * 7
     self.command_effort = [None] * 7
 
     # For threading safety
@@ -167,11 +168,15 @@ def is_ik_jumping(state, command_pos):
     return True
   return False
 
-def update_position_command(state, command_pos):
+def update_command(state, command_pos, command_vel=None):
   if command_pos[0] is not None:
     state.command_position = np.array(command_pos)
   else:
     state.command_position = [None] * 7
+  if command_vel is None or any(x is None for x in command_vel):
+    state.command_velocity = [None] * 7
+  else:
+    state.command_velocity = np.array(command_vel)
 
 # The following function, send_command, is not in use. Instead use send_command_controller
 def send_command(state, command_pos, command_eff):
@@ -186,7 +191,7 @@ def send_command(state, command_pos, command_eff):
 def send_command_controller(state, timestamp=None):
   pwm = state.controller.gen_pwm(
     state.current_position, state.current_velocity, state.current_effort,
-    state.command_position, [None] * 7, state.command_effort)
+    state.command_position, state.command_velocity, state.command_effort)
   command = hebi.GroupCommand(7)
   command.effort = np.array(pwm)
   state.arm.group.send_command(command)
@@ -194,7 +199,8 @@ def send_command_controller(state, timestamp=None):
   if state.controller_save_file:
     state.controller_queue.put((np.array(timestamp),
       np.array(state.current_position), np.array(state.current_velocity), np.array(state.current_effort),
-      np.array(state.command_position), np.array(state.command_effort), np.array(pwm)))
+      np.array(state.command_position), np.array(state.command_velocity), np.array(state.command_effort),
+      np.array(pwm)))
 
 def save_fdbk_to_file(controller_save_fn, q, last_tuned_joint=None):
     file_handler = open(controller_save_fn, 'a')
@@ -263,7 +269,8 @@ def command_proc(state):
 
     # Generating command
     assert current_mode in state.mode_keys
-    command_pos = state.modes[current_mode](state, time())
+    # TODO: change modes to return command vels
+    command_pos, command_vel = state.modes[current_mode](state, time())
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
@@ -273,7 +280,7 @@ def command_proc(state):
         else:
           state.command_smoother.append(command_pos)
           command_pos = np.array(state.command_smoother.get())
-      update_position_command(state, command_pos)
+      update_command(state, command_pos, command_vel)
 
     # Publish Joint State
     if not rospy.is_shutdown():
@@ -290,6 +297,7 @@ def command_proc(state):
         for i in range(num_modules):
           joint_command_msg.position[i] = state.command_position[i]
           #joint_command_msg.velocity[i] = command.velocity[i]
+          joint_command_msg.velocity[i] = state.command_velocity[i]
           joint_command_msg.effort[i] = state.command_effort[i]
         joint_command_publisher.publish(joint_command_msg)
 
@@ -351,7 +359,8 @@ def _print_help(key, state):
 # ------------------------------------------------------------------------------
 
 def __idle(state, curr_time):
-  return [None] * 7 # No position command in grav comp / idle
+  none = [None] * 7
+  return none, none # No position or velocity command in grav comp / idle
 
 #######################################################################
 # Main thread switches running mode by accepting keyboard command

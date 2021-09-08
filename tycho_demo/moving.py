@@ -44,9 +44,9 @@ def __move(per_step_time, state, cur_time):
 	    state.current_position, state.moving_positions, per_step_time=per_step_time)
   elapse_time = cur_time - state.trajectory_start
   if elapse_time > state.trajectory.duration:
-    return state.moving_positions[-1]
+    return state.moving_positions[-1], [None] * 7
   pos, _, _ = state.trajectory.get_state(elapse_time)
-  return list(pos)
+  return list(pos), [None] * 7
 
 def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
   num_points = len(_positions) + 3

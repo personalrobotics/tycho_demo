@@ -37,10 +37,10 @@ def __replay(state, cur_time):
   state._replay_lock.acquire()
   cmd = list(state.last_replay_cmd)
   state._replay_lock.release()
-  return cmd
+  return cmd, [None] * 7
 
 def __wait_for_replay(state, cur_time):
-  return state.fix_position
+  return state.fix_position, [None] * 7
 
 def launch_replay_subscriber(state):
   print_and_cr('Launch Ros Subscriber for replaying ... ')

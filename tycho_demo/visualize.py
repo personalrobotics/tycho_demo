@@ -126,18 +126,26 @@ def viz_errors(fn="controller.csv", last_tuned_joint=None):
   xar = []
   yar = [[] for _ in range(7)]
   y2ar = [[] for _ in range(7)]
+  vels = [[] for _ in range(7)]
+  command_vels = [[] for _ in range(7)]
   for eachLine in dataArray[:-1]:
     try:
-        timestamp_s,positions,velocities,efforts,positionCommands,effortCommands,pwmCommands = eachLine.split(',')
+        timestamp_s,positions,velocities,efforts,positionCommands,velocityCommands,effortCommands,pwmCommands = eachLine.split(',')
         timestamp_s = np.mean(str2nparray(timestamp_s))
         positions = str2nparray(positions)
         positionCommands = str2nparray(positionCommands)
+        velocities = str2nparray(velocities)
+        velocityCommands = str2nparray(velocityCommands)
         if len(positionCommands) == 0:
           positionCommands = positions
+        if len(velocityCommands) == 0:
+          velocityCommands = velocities
         xar.append(timestamp_s)
         for _j in range(7):
           yar[_j].append(positions[_j])
           y2ar[_j].append(positionCommands[_j])
+          vels[_j].append(velocities[_j])
+          command_vels[_j].append(velocityCommands[_j])
     except:
         print('Skip a row when loading controller save file')
   viz_targets = [last_tuned_joint] if last_tuned_joint is not None else range(6)
@@ -149,11 +157,17 @@ def viz_errors(fn="controller.csv", last_tuned_joint=None):
     max_err = errors[_j, max_idx]
     x_at_max_err = xar[max_idx]
     print_and_cr('Joint {} max error: {} at x={}\tavg err: {}\n'.format(_j, max_err, x_at_max_err, avg_err))
-    fig = plt.figure()
+    plt.figure()
     plt.axvline(x=x_at_max_err, color='g')  #vertical line at max diff
     plt.plot(xar,yar[_j], color='red', label='pos', marker='o')
     plt.plot(xar,y2ar[_j], color='blue', label='cmd', marker='o')
     plt.title('Joint {}'.format(_j))
+    plt.legend()
+
+    plt.figure()
+    plt.plot(xar, vels[_j], color='red', label='vel', marker='o')
+    plt.plot(xar, command_vels[_j], color='blue', label='cmd', marker='o')
+    plt.title('Joint {} vel'.format(_j))
     plt.legend()
 
   plt.show()
