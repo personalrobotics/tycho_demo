@@ -28,14 +28,18 @@ def add_moving_function(state):
   state.modes[FAST_MOVING_MODE] = partial(__move, 3.0)
   state.modes[SLOW_MOVING_MODE] = partial(__move, 7.0)
 
-def _move(key, state):
-  print_and_cr('Move to a predefined sets of positions')
+def do_move(state, moving_positions, slow, return_mode=None):
   state.lock()
   state.trajectory = None
-  state.moving_positions = [MOVING_POSITION]
-  state.mode = SLOW_MOVING_MODE if key == SLOW_MOVING_KEY else FAST_MOVING_MODE
+  state.moving_positions = moving_positions
+  state.mode = SLOW_MOVING_MODE if slow else FAST_MOVING_MODE
   state.command_smoother.reset()
+  state.return_mode = return_mode
   state.unlock()
+
+def _move(key, state):
+  print_and_cr('Move to a predefined sets of positions')
+  do_move(state, [MOVING_POSITION], key == SLOW_MOVING_KEY)
 
 def __move(per_step_time, state, cur_time):
   if state.trajectory is None:
@@ -44,6 +48,9 @@ def __move(per_step_time, state, cur_time):
 	    state.current_position, state.moving_positions, per_step_time=per_step_time)
   elapse_time = cur_time - state.trajectory_start
   if elapse_time > state.trajectory.duration:
+    # allows other modes programmatic access to moving mode
+    if state.return_mode and elapse_time >= 1.1 * state.trajectory.duration:
+      state.mode = state.return_mode
     return state.moving_positions[-1], [None] * 7
   pos, _, _ = state.trajectory.get_state(elapse_time)
   return list(pos), [None] * 7
