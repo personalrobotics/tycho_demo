@@ -37,10 +37,13 @@ def add_recording_function(state):
       ]
   state.onclose.append(_stop_recording_on_quit)
 
-  if (not hasattr(state, "save_record_folder")) or state.save_record_folder is None:
+  if 'save_record_folder' in state.params:
+    state.save_record_folder = state.params['save_record_folder']
+  else:
     dir_path = os.path.dirname(os.path.realpath(__file__))
     state.save_record_folder = os.path.join(dir_path, '..', 'recording')
-  if state.save_record_folder != '' and not os.path.isdir(state.save_record_folder):
+  if not os.path.isdir(state.save_record_folder):
+    print(f"Attempt to create the recording folder: {state.save_record_folder}")
     os.mkdir(state.save_record_folder)
 
 def _record(key, state):

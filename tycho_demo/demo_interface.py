@@ -228,7 +228,6 @@ def command_proc(state):
 
   joint_state_msg = init_joint_state_msg(num_modules)
   joint_command_msg = init_joint_state_msg(num_modules)
-
   counter = 0
 
   while not state.quit:
@@ -279,7 +278,7 @@ def command_proc(state):
           command_pos = state.command_smoother.get()
         else:
           state.command_smoother.append(command_pos)
-          command_pos = np.array(state.command_smoother.get())
+          command_pos = state.command_smoother.get()
       update_command(state, command_pos, command_vel)
 
     # Publish Joint State
@@ -297,7 +296,7 @@ def command_proc(state):
         for i in range(num_modules):
           joint_command_msg.position[i] = state.command_position[i]
           #joint_command_msg.velocity[i] = command.velocity[i]
-          joint_command_msg.velocity[i] = state.command_velocity[i]
+          # joint_command_msg.velocity[i] = state.command_velocity[i]
           joint_command_msg.effort[i] = state.command_effort[i]
         joint_command_publisher.publish(joint_command_msg)
 
@@ -366,7 +365,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run(callback_func=None, recording_path=None):
+def run(callback_func=None, params={}):
   state, _, _ = init_robotarm()
   setup_nn_residual(state)
   state.use_nn_backlash = False
@@ -388,8 +387,7 @@ def run(callback_func=None, recording_path=None):
   state.handlers = handlers
   state.modes = modes
   state.onclose = onclose
-
-  state.save_record_folder = recording_path
+  state.params = params
 
   # Examples of installing new functions
   add_moving_function(state)
