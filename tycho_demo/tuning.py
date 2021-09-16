@@ -68,7 +68,7 @@ def _fix(key, state):
 
 def _select_tuning_joint(key, state):
   state.lock()
-  if state.mode == 'swing' or state.mode == 'step':
+  if state.mode in TUNING_MODES:
     if key == '7':
       state.last_tuned_joint = None
     else:
@@ -98,8 +98,7 @@ def __swing_vel(state, cur_time):
     amplitude = 0.2 * np.pi
     elapsed = cur_time - state.tuning_start_time
     position = state.fix_position.copy()
-    # set displacement (from fix position) to definite integral of velocity function
-    position[state.tuning_joint] += amplitude - amplitude * np.cos(elapsed)
+    position[state.tuning_joint] = None # fix every joint except for tuning joint
     velocity = [0] * 7
     velocity[state.tuning_joint] = amplitude * np.sin(elapsed)
     return position, velocity
