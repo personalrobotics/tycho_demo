@@ -17,35 +17,34 @@ from functools import partial
 
 SLOW_MOVING_KEY = "M"
 FAST_MOVING_KEY = "m"
-SLOW_MOVING_MODE = "slow_moving"
-FAST_MOVING_MODE = "moving"
+MOVING_MODE = "moving"
 
 OPEN_LIMIT = CHOPSTICK_OPEN - 0.02
 CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
 
 def add_moving_function(state):
   state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
-  state.modes[FAST_MOVING_MODE] = partial(__move, 3.0)
-  state.modes[SLOW_MOVING_MODE] = partial(__move, 7.0)
+  state.modes[MOVING_MODE] = __move
 
-def do_move(state, moving_positions, slow, return_mode=None):
+def do_move(state, moving_positions, total_time, return_mode=None):
   state.lock()
   state.trajectory = None
   state.moving_positions = moving_positions
-  state.mode = SLOW_MOVING_MODE if slow else FAST_MOVING_MODE
+  state.mode = MOVING_MODE
   state.command_smoother.reset()
   state.return_mode = return_mode
+  state.per_step_time = total_time / len(moving_positions)
   state.unlock()
 
 def _move(key, state):
   print_and_cr('Move to a predefined sets of positions')
-  do_move(state, [MOVING_POSITION], key == SLOW_MOVING_KEY)
+  do_move(state, [MOVING_POSITION], 7.0 if key == SLOW_MOVING_KEY else 3.0)
 
-def __move(per_step_time, state, cur_time):
+def __move(state, cur_time):
   if state.trajectory is None:
     state.trajectory_start = cur_time
     state.trajectory = create_moving_trajectory(
-	    state.current_position, state.moving_positions, per_step_time=per_step_time)
+	    state.current_position, state.moving_positions, per_step_time=state.per_step_time)
   elapse_time = cur_time - state.trajectory_start
   if elapse_time > state.trajectory.duration:
     # allows other modes programmatic access to moving mode

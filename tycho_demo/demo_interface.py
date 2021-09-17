@@ -39,6 +39,7 @@ from .keyboard import getch
 from .moving import add_moving_function
 from .recording import add_recording_function
 from .tuning import add_tuning_function
+from .safe_move import add_safe_move_function
 
 # Feedback frequency (100 * x) Hz
 FEEDBACK_FREQUENCY = 5
@@ -393,6 +394,7 @@ def run(callback_func=None, params={}):
   add_moving_function(state)
   add_recording_function(state)
   add_tuning_function(state)
+  add_safe_move_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:

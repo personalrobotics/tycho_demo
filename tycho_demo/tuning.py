@@ -98,7 +98,8 @@ def __swing_vel(state, cur_time):
     amplitude = 0.2 * np.pi
     elapsed = cur_time - state.tuning_start_time
     position = state.fix_position.copy()
-    position[state.tuning_joint] = None # fix every joint except for tuning joint
+    # position[state.tuning_joint] = None # fix every joint except for tuning joint
+    position[state.tuning_joint] += amplitude - amplitude * np.cos(elapsed)
     velocity = [0] * 7
     velocity[state.tuning_joint] = amplitude * np.sin(elapsed)
     return position, velocity
