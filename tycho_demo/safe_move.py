@@ -18,7 +18,7 @@ FAST_MOVING_KEY = "n"
 
 def add_safe_move_function(state):
     state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
-    state.joint_rrt = TychoRRT("jointpos")
+    state.joint_rrt = TychoRRT()
 
 def do_move(state, target_joint_pos, total_time, return_mode=None):
     moving_positions = state.joint_rrt.plan(target_joint_pos, target_joint_pos)
