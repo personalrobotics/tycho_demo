@@ -27,10 +27,7 @@ sleep 2s
 pr_ros_launcher "tycho_description" "tycho_description" "robot_chopsticks.launch"
 
 # 3. transform
-# Updated 2021 June 24
-# If you run thecalibration and obtained an R that transforms optitrack frame to base, it is probably qx qy qz qw x y z
-# We expect the transformation to be specified as " ... x y z qx qy qz qw world optitrack " here.
-launcher "tycho_transform" "rosrun tf static_transform_publisher -1.07318192 0.17227197 -0.00543 0.00668706 0.00741980 -0.00000018 0.99995011 world optitrack 10"
+source $(catkin locate)/src/tycho_demo/launch/optitrack_transform.sh
 
 # 4. camera
 #pr_ros_launcher "realsense" "tycho_demo" "realsense-camera.launch"
