@@ -21,9 +21,9 @@ def add_safe_move_function(state):
     state.joint_rrt = TychoRRT()
 
 def do_move(state, target_joint_pos, total_time, return_mode=None):
-    moving_positions = state.joint_rrt.plan(target_joint_pos, target_joint_pos)
+    moving_positions = state.joint_rrt.plan(state.current_position, target_joint_pos)
     do_unsafe_move(state, moving_positions, total_time, return_mode=return_mode)
 
 def _move(key, state):
     print_and_cr('Move to a predefined sets of positions, using collision checking')
-    do_move(state, MOVING_POSITION, 10.0 if key == SLOW_MOVING_KEY else 5.0)
+    do_move(state, MOVING_POSITION, 7.0 if key == SLOW_MOVING_KEY else 5.0)

@@ -42,7 +42,7 @@ from .tuning import add_tuning_function
 from .safe_move import add_safe_move_function
 
 # Feedback frequency (100 * x) Hz
-FEEDBACK_FREQUENCY = 5
+FEEDBACK_FREQUENCY = 2
 
 # Cameras
 DEFAULT_CAMERAS = ['435', '415_1', '415_2']
@@ -119,7 +119,7 @@ class State(object):
 
 def init_joint_state_msg(DOF=7):
   joint_state_msg = JointState()
-  joint_name_list = ['HEBI/base/X8_9', 'HEBI/shoulder/X8_16', 'HEBI/elbow/X8_9', 'HEBI/wrist1/X5_1', 'HEBI/wrist2/X5_1', 'HEBI/wrist3/X5_1', 'HEBI/chopstick_actuator/X5_1']
+  joint_name_list = ['HEBI/base/X8_9', 'HEBI/shoulder/X8_16', 'HEBI/elbow/X8_9', 'HEBI/wrist1/X5_9', 'HEBI/wrist2/X5_1', 'HEBI/wrist3/X5_1', 'HEBI/chopstick_actuator/X5_1']
   for i in range(DOF):
     joint_state_msg.name.append(joint_name_list[i])
     joint_state_msg.position.append(0.0)
@@ -142,6 +142,7 @@ def init_robotarm():
 
   state = State(arm, controller_gains_xml_file)
   state.controller = TychoController(controller_gains_xml_file, False)
+  state.use_factory_controller = False
   return state, controller_gains_xml_file, directPWM_xml_file
 
 def setup_nn_residual(state):
@@ -169,26 +170,33 @@ def is_ik_jumping(state, command_pos):
     return True
   return False
 
-def update_command(state, command_pos, command_vel=None):
-  if command_pos[0] is not None:
-    state.command_position = np.array(command_pos)
-  else:
-    state.command_position = [None] * 7
-  if command_vel is None or any(x is None for x in command_vel):
-    state.command_velocity = [None] * 7
-  else:
-    state.command_velocity = np.array(command_vel)
+def update_command(state, command_pos, command_vel): # TODO @kay refactor API
+  state.command_position = command_pos
+  state.command_velocity = command_vel
 
-# The following function, send_command, is not in use. Instead use send_command_controller
-def send_command(state, command_pos, command_eff):
+# Send command to the module directly => Use factory PID controller # TODO @kay verify
+def send_command(state, timestamp):
   hebi_command = hebi.GroupCommand(7)
-  if command_pos[0] is not None:
-    # Apply offset iff sending to the original hebi controller IF WE ARE ON POSITION CONTROL!
-    hebi_command.position = np.array(command_pos) - OFFSET_JOINTS
-  if command_eff[0] is not None:
-    hebi_command.effort = command_eff
-  state.arm.group.send_command(hebi_command)
+  # nan means no command (referred to elsewhere as None)
+  command_pos = [np.nan if p is None else p for p in state.command_position]
+  command_vel = [np.nan if v is None else v for v in state.command_velocity]
+  # Apply offset iff sending to the original hebi controller IF WE ARE ON POSITION CONTROL!
+  hebi_command.position = np.array(command_pos) - OFFSET_JOINTS
+  hebi_command.velocity = np.array(command_vel)
+  hebi_command.effort = state.arm._get_grav_comp_efforts(state.current_position).copy()
+  # print_and_cr(f"command_position = {hebi_command.position}")
+  # print_and_cr(f"command_velocity = {hebi_command.velocity }")
+  # print_and_cr(f"command_effort = {hebi_command.effort}")
 
+
+  state.arm.group.send_command(hebi_command)
+  if state.controller_save_file:
+    state.controller_queue.put((np.array(timestamp),
+      np.array(state.current_position), np.array(state.current_velocity), np.array(state.current_effort),
+      np.array(state.command_position), np.array(state.command_velocity), np.array(state.command_effort),
+      np.array([0] * 7)))
+
+# Make our customized controller send the command to the hardware
 def send_command_controller(state, timestamp=None):
   pwm = state.controller.gen_pwm(
     state.current_position, state.current_velocity, state.current_effort,
@@ -253,7 +261,7 @@ def command_proc(state):
     current_mode = state.mode
     cur_time = time()
 
-    if not state._mute:
+    if not state._mute and not state.use_factory_controller:
       state.command_effort = state.arm._get_grav_comp_efforts(state.current_position).copy()
       send_command_controller(state, feedback.hardware_receive_time)
 
@@ -269,18 +277,20 @@ def command_proc(state):
 
     # Generating command
     assert current_mode in state.mode_keys
-    # TODO: change modes to return command vels
+    # TODO: ensure all modes to return command vels
     command_pos, command_vel = state.modes[current_mode](state, time())
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
-      if np.all(np.array(command_pos) != None):
-        if is_ik_jumping(state, command_pos):
-          command_pos = state.command_smoother.get()
-        else:
-          state.command_smoother.append(command_pos)
-          command_pos = state.command_smoother.get()
+      # if all(pos is not None for pos in command_pos):
+        # if False and is_ik_jumping(state, command_pos):
+        #   command_pos = state.command_smoother.get()
+        # else:
+        #   state.command_smoother.append(command_pos)
+        #   command_pos = state.command_smoother.get()
       update_command(state, command_pos, command_vel)
+      if state.use_factory_controller:
+        send_command(state, feedback.hardware_receive_time)
 
     # Publish Joint State
     if not rospy.is_shutdown():
@@ -292,13 +302,14 @@ def command_proc(state):
           joint_state_msg.effort[i] = state.current_effort[i]
         joint_state_publisher.publish(joint_state_msg)
 
-      if joint_command_msg and command_pos[0] is not None:
+      has_command = any(p is not None for p in state.command_position) or \
+                    any(v is not None for v in state.command_velocity)
+      if joint_command_msg and has_command:
         joint_command_msg.header.stamp = rospy.Time.now()
-        for i in range(num_modules):
-          joint_command_msg.position[i] = state.command_position[i]
-          #joint_command_msg.velocity[i] = command.velocity[i]
-          # joint_command_msg.velocity[i] = state.command_velocity[i]
-          joint_command_msg.effort[i] = state.command_effort[i]
+        for i, (p, v, e) in enumerate(zip(state.command_position, state.command_velocity, state.command_effort)):
+          joint_command_msg.position[i] = p if p is not None else np.nan
+          joint_command_msg.velocity[i] = v if v is not None else np.nan
+          joint_command_msg.effort[i] = e if e is not None else np.nan
         joint_command_publisher.publish(joint_command_msg)
 
     # Update publisher
@@ -313,8 +324,36 @@ def command_proc(state):
 
 def _load_gain(key, state):
   state.lock()
-  print_and_cr('Controller loading gains from {}'.format(state.gains_file))
+  if state.use_factory_controller:
+    print_and_cr(colors.bg.blue +
+                 'Switch to use the custom PID controller and loading gains' +
+                 colors.reset)
+    directPWM_gains_xml_file = get_gains_path('-directPWM')
+    try:
+      load_gain(state.arm.group, directPWM_gains_xml_file)
+      state.use_factory_controller = False
+      print_and_cr('Loaded hardware controller PWM gains and custom PID gains')
+    except:
+      print_and_cr(colors.bg.red + "Error: could not load gains to use the custom PID" + colors.reset)
+      state.quit = True
   state.controller.load_gains(state.gains_file)
+  state.unlock()
+
+def _load_hardware_gain(key, state):
+  state.lock()
+  if not state.use_factory_controller:
+    print_and_cr(colors.bg.blue +
+                 'Switch to use the hardware PID controller and loading gains' +
+                 colors.reset)
+  controller_gains_xml_file = get_gains_path('-hardwarePID')
+  try:
+    load_gain(state.arm.group, controller_gains_xml_file)
+    state.use_factory_controller = True
+    print_and_cr(f"Load hardware PID gains from {controller_gains_xml_file}")
+  except Exception as e:
+    print_and_cr(colors.bg.red + "Error: could not load gains to use the hardware PID" + colors.reset)
+    print(e)
+    state.quit = True
   state.unlock()
 
 def _idle(key, state):
@@ -368,6 +407,7 @@ def __idle(state, curr_time):
 
 def run(callback_func=None, params={}):
   state, _, _ = init_robotarm()
+  _load_hardware_gain('L', state)
   setup_nn_residual(state)
   state.use_nn_backlash = False
 
@@ -376,7 +416,8 @@ def run(callback_func=None, params={}):
   modes = {}
   onclose = []
 
-  handlers['L'] = handlers['l'] = _load_gain
+  handlers['L'] = _load_hardware_gain
+  handlers['l'] = _load_gain
   handlers['z'] = _idle
   handlers['Z'] = _mute
   handlers['v'] = _print_state
