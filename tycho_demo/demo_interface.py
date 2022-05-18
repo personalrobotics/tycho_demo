@@ -1,16 +1,13 @@
 from __future__ import print_function
 
-import sys; sys.path.append("/usr/lib/python3/dist-packages")
-# The above line enables the conda python interpreter to access ROS packages
+import sys
+sys.path.append("/usr/lib/python3/dist-packages")
+# Enable the conda python interpreter to access ROS packages
 # Even if ROS installs the packages to the system python
 
-import os
 from time import time, sleep
-import numpy as np
-
-from subprocess import Popen, STDOUT
 from threading import Lock, Thread
-from multiprocessing import Process
+import numpy as np
 
 # Ros
 import rospy
@@ -119,7 +116,15 @@ class State(object):
 
 def init_joint_state_msg(DOF=7):
   joint_state_msg = JointState()
-  joint_name_list = ['HEBI/base/X8_9', 'HEBI/shoulder/X8_16', 'HEBI/elbow/X8_9', 'HEBI/wrist1/X5_9', 'HEBI/wrist2/X5_1', 'HEBI/wrist3/X5_1', 'HEBI/chopstick_actuator/X5_1']
+  joint_name_list = [
+    # Publish robot joint state for ROS viz, matching tycho_description
+    'HEBI/base/X8_9',
+    'HEBI/shoulder/X8_16',
+    'HEBI/elbow/X8_9',
+    'HEBI/wrist1/X5_9',
+    'HEBI/wrist2/X5_1',
+    'HEBI/wrist3/X5_1',
+    'HEBI/chopstick_actuator/X5_1']
   for i in range(DOF):
     joint_state_msg.name.append(joint_name_list[i])
     joint_state_msg.position.append(0.0)
@@ -166,7 +171,7 @@ def is_ik_jumping(state, command_pos):
   if np.greater(np.abs(a-b), threshold).any():
     print_and_cr("IK Jumps \t" +
                  np.array2string(np.abs(a-b), precision=4, separator=',',
-                      suppress_small=True))
+                                 suppress_small=True))
     return True
   return False
 
@@ -191,9 +196,14 @@ def send_command(state, timestamp):
 
   state.arm.group.send_command(hebi_command)
   if state.controller_save_file:
-    state.controller_queue.put((np.array(timestamp),
-      np.array(state.current_position), np.array(state.current_velocity), np.array(state.current_effort),
-      np.array(state.command_position), np.array(state.command_velocity), np.array(state.command_effort),
+    state.controller_queue.put((
+      np.array(timestamp),
+      np.array(state.current_position),
+      np.array(state.current_velocity),
+      np.array(state.current_effort),
+      np.array(state.command_position),
+      np.array(state.command_velocity),
+      np.array(state.command_effort),
       np.array([0] * 7)))
 
 # Make our customized controller send the command to the hardware
@@ -206,26 +216,15 @@ def send_command_controller(state, timestamp=None):
   state.arm.group.send_command(command)
   # TODO: at some point maybe abstract away the controller_queue object
   if state.controller_save_file:
-    state.controller_queue.put((np.array(timestamp),
-      np.array(state.current_position), np.array(state.current_velocity), np.array(state.current_effort),
-      np.array(state.command_position), np.array(state.command_velocity), np.array(state.command_effort),
+    state.controller_queue.put((
+      np.array(timestamp),
+      np.array(state.current_position),
+      np.array(state.current_velocity),
+      np.array(state.current_effort),
+      np.array(state.command_position),
+      np.array(state.command_velocity),
+      np.array(state.command_effort),
       np.array(pwm)))
-
-def save_fdbk_to_file(controller_save_fn, q, last_tuned_joint=None):
-    file_handler = open(controller_save_fn, 'a')
-    while True:
-        new_items = q.get(block=True)
-        if new_items == 'DONE':
-            file_handler.close()
-            Process(target=viz_errors,args=(controller_save_fn, last_tuned_joint),).start() # UNCOMMENT THIS for gain tune
-            return
-        for item in new_items[:-1]:
-            file_handler.write(np.array2string(item,
-              precision=8, separator=' ', max_line_width=9999)[1:-1])
-            file_handler.write(',')
-        file_handler.write(np.array2string(new_items[-1],
-          precision=8, separator=' ', max_line_width=9999)[1:-1])
-        file_handler.write('\n')
 
 def command_proc(state):
   group = state.arm.group
@@ -253,7 +252,8 @@ def command_proc(state):
     state.current_position += OFFSET_JOINTS
 
     if state.use_nn_backlash:
-      state.current_position[:6] += state.res_estimator.predict(state.current_position[0:6])
+      state.current_position[:6] += \
+          state.res_estimator.predict(state.current_position[0:6])
 
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
@@ -262,7 +262,8 @@ def command_proc(state):
     cur_time = time()
 
     if not state._mute and not state.use_factory_controller:
-      state.command_effort = state.arm._get_grav_comp_efforts(state.current_position).copy()
+      state.command_effort = \
+          state.arm._get_grav_comp_efforts(state.current_position).copy()
       send_command_controller(state, feedback.hardware_receive_time)
 
     counter += 1
@@ -306,7 +307,9 @@ def command_proc(state):
                     any(v is not None for v in state.command_velocity)
       if joint_command_msg and has_command:
         joint_command_msg.header.stamp = rospy.Time.now()
-        for i, (p, v, e) in enumerate(zip(state.command_position, state.command_velocity, state.command_effort)):
+        for i, (p, v, e) in enumerate(zip(state.command_position,
+                                          state.command_velocity,
+                                          state.command_effort)):
           joint_command_msg.position[i] = p if p is not None else np.nan
           joint_command_msg.velocity[i] = v if v is not None else np.nan
           joint_command_msg.effort[i] = e if e is not None else np.nan
@@ -334,7 +337,9 @@ def _load_gain(key, state):
       state.use_factory_controller = False
       print_and_cr('Loaded hardware controller PWM gains and custom PID gains')
     except:
-      print_and_cr(colors.bg.red + "Error: could not load gains to use the custom PID" + colors.reset)
+      print_and_cr(colors.bg.red +
+                   "Error: could not load gains to use the custom PID" +
+                   colors.reset)
       state.quit = True
   state.controller.load_gains(state.gains_file)
   state.unlock()
@@ -350,9 +355,9 @@ def _load_hardware_gain(key, state):
     load_gain(state.arm.group, controller_gains_xml_file)
     state.use_factory_controller = True
     print_and_cr(f"Load hardware PID gains from {controller_gains_xml_file}")
-  except Exception as e:
+  except Exception as my_exception:
     print_and_cr(colors.bg.red + "Error: could not load gains to use the hardware PID" + colors.reset)
-    print(e)
+    print(my_exception)
     state.quit = True
   state.unlock()
 
@@ -389,8 +394,8 @@ def _print_help(key, state):
     print_and_cr("\t%s - %s" % (k, state.handlers[k].__name__.replace("_", " ").strip()))
   print_and_cr("Modes:")
   modes = sorted(state.modes.keys())
-  for m in modes:
-    print_and_cr("\t%s" % m)
+  for _mode in modes:
+    print_and_cr("\t%s" % _mode)
 
 
 # ------------------------------------------------------------------------------
@@ -405,7 +410,8 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run(callback_func=None, params={}):
+def run(callback_func=None, params=None):
+  params = params or {}
   state, _, _ = init_robotarm()
   _load_hardware_gain('L', state)
   setup_nn_residual(state)
