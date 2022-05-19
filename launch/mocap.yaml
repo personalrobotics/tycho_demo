@@ -1,9 +1,29 @@
 #
 # Definition of all trackable objects
-# Identifier corresponds to Trackable ID set in Tracking Tools
+#
+# When you register rigid bodies here, the identifier ('rigid_bodies' '1')
+# corresponds to Trackable ID set in Optitrack.
+#
+# When you create rigid body in Optitrack from points, ensure you
+# select the first point in this list, the second point, ...
+# e.g. for the end effector tracker your mouse selects R0 the point closest
+# to the chopsticks tip first, then the middle, then the tail; then
+# you right click and 'Create rigid body from selected markers'.
+#
+# When you track individual points, pay attention to the order of them.
+# Because our demo code makes assumption about the order of points.
+# e.g. The first item in individual point tracking result is always
+# assumed to be the 'Ball' item.
+# However, the yaml load module will sort the point by their names
+# e.g. If you rename points in this config to have names 'T3' 'A0' 'Ball',
+# the resulting list will contain 'A0' 'Ball' 'T3' in ascending order.
+# Pay attention to not change the resulted order when you change the names.
+#
+# When you track individual points, you will need to assign an initial
+# position (in optitrack frame). To find it, look up the coordinate of
+# this point in Motive Software and paste here directly.
 #
 rigid_bodies:
-    # MATCH the order of points to select, when creating rigid body in Optitrack Software !!!
     '1': # the end effector tracker
         use_new_coordinates: false
         publish_markers: true
@@ -24,15 +44,35 @@ rigid_bodies:
         #pose2d: chop/ground_pose
         #child_frame_id: chop/base_link
         #parent_frame_id: map
+    '2': # the leader chopsticks
+        use_new_coordinates: false
+        publish_markers: true
+        markers:
+            'T0':
+                topic_name: T0/point # should be the one near tip
+                frame_id: optitrack
+                init_pos: [.0, .0, .0] # dummy
+            'T1': # The middle
+                topic_name: T1/point
+                frame_id: optitrack
+                init_pos: [.0, .0, .0] # dummy
+            'T2': # The tails
+                topic_name: T2/point
+                frame_id: optitrack
+                init_pos: [.0, .0, .0] # dummy
 markers:
-    # The order of points matter (because the demo code makes assumption about the order of points)
-    # However, the yaml load module will sort the items by their entry keys (e.g. from A to Z)
-    # Pay attention to not change the resulted order when you change the names
-    # In optitrack frame, look up the coordinate in Motive Software and paste here directly!
     'Ball': # the marker ball to pick up
         topic_name: Ball/point
         frame_id: optitrack
-        init_pos: [0.639, -0.007, 0.311]
+        init_pos: [0.123335, -0.014970, 0.334660]
+    'T3': # the head of the chopsticks that are mounted with two markers
+        topic_name: T3/point
+        frame_id: optitrack
+        init_pos:  [0.283785, -0.012536, 0.038063]
+    'T4': # the tail of the chopsticks that are mounted with two markers
+        topic_name: T4/point
+        frame_id: optitrack
+        init_pos:  [0.481058, -0.012049, 0.033723]
 
 optitrack_config:
-        multicast_address: 224.0.0.1
+        multicast_address: 239.255.42.99

@@ -2,7 +2,7 @@
 <package format="2">
   <name>tycho_demo_ros</name>
   <version>1.0.0</version>
-  <description>Hebi Demo Base Package</description>
+  <description>Tycho Demo Base Package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
