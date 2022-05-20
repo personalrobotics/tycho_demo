@@ -1,5 +1,5 @@
 #######################################################################
-# Moving
+# Snaping
 # ------------------------------------------------------------------------------
 # Move the robot to a preset starting location (ignoring collision etc)
 # - Moving
@@ -22,11 +22,11 @@ MOVING_MODE = "moving"
 OPEN_LIMIT = CHOPSTICK_OPEN - 0.02
 CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
 
-def add_moving_function(state):
+def add_snapping_function(state):
   state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
   state.modes[MOVING_MODE] = __move
 
-def do_move(state, moving_positions, total_time, return_mode=None):
+def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.lock()
   state.trajectory = None
   state.moving_positions = moving_positions
@@ -38,7 +38,7 @@ def do_move(state, moving_positions, total_time, return_mode=None):
 
 def _move(key, state):
   print_and_cr('Move to a predefined sets of positions')
-  do_move(state, [MOVING_POSITION], 7.0 if key == SLOW_MOVING_KEY else 3.0)
+  do_snapping(state, [MOVING_POSITION], 7.0 if key == SLOW_MOVING_KEY else 3.0)
 
 def __move(state, cur_time):
   if state.trajectory is None:
@@ -73,7 +73,6 @@ def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
     positions[:,i+2] = _positions[i]
   positions[:,-1] = _positions[-1]
   velocities[:, 1:-1] = np.nan
-
 
   return hebi.trajectory.create_trajectory(time_vector, positions, velocities)
 

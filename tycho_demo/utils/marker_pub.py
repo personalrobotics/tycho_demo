@@ -1,9 +1,6 @@
 import rospy
-import numpy as np
-from geometry_msgs.msg import Pose, PointStamped
+from geometry_msgs.msg import PointStamped
 from visualization_msgs.msg import Marker
-from scipy.spatial.transform import Rotation as scipyR
-from std_msgs.msg import ColorRGBA
 
 def construct_object_point(frame_id="world"):
   point = PointStamped()
@@ -16,10 +13,9 @@ def update_point_position(point, x, y, z):
   point.point.y = y
   point.point.z = z
 
-def construct_marker(frame_id="world",
-                     marker_id=1,
-                     marker_type=9, # text
-                     ):
+def construct_marker(
+    frame_id="world", marker_id=1, marker_type=9, # text
+  ):
   marker = Marker()
   marker.header.frame_id = frame_id
   marker.header.stamp = rospy.Time.now()

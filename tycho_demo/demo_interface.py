@@ -31,12 +31,8 @@ from tycho_env.utils import (
 from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
-from .keyboard import getch
-# Custom functions
-from .moving import add_moving_function
-from .recording import add_recording_function
-from .tuning import add_tuning_function
-from .safe_move import add_safe_move_function
+from tycho_demo.keyboard import getch
+from tycho_demo.addon import add_snapping_function, add_moving_function
 
 # Feedback frequency (100 * x) Hz
 FEEDBACK_FREQUENCY = 1
@@ -347,7 +343,7 @@ def _load_gain(key, state):
   state.controller.load_gains(state.gains_file)
   state.unlock()
 
-def _load_hardware_gain(key, state):
+def _load_hebi_controller_gains(key, state):
   state.lock()
   if not state.use_factory_controller:
     print_and_cr(colors.bg.blue +
@@ -400,6 +396,16 @@ def _print_help(key, state):
   for _mode in modes:
     print_and_cr("\t%s" % _mode)
 
+def init_default_handlers():
+  handlers = {}
+  handlers['L'] = _load_hebi_controller_gains
+  handlers['l'] = _load_gain
+  handlers['z'] = _idle
+  handlers['Z'] = _mute
+  handlers['v'] = _print_state
+  handlers['o'] = _toggle_nn_backlash
+  handlers['h'] = _print_help
+  return handlers
 
 # ------------------------------------------------------------------------------
 # Modes Handler
@@ -413,38 +419,24 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run(callback_func=None, params=None):
+def run_demo(callback_func=None, params=None):
   params = params or {}
   state, _, _ = init_robotarm()
-  _load_hardware_gain('L', state)
+  _load_hebi_controller_gains('L', state)
   setup_nn_residual(state)
   state.use_nn_backlash = False
 
   # Basic demo functions
-  handlers = {}
   modes = {}
   onclose = []
-
-  handlers['L'] = _load_hardware_gain
-  handlers['l'] = _load_gain
-  handlers['z'] = _idle
-  handlers['Z'] = _mute
-  handlers['v'] = _print_state
-  handlers['o'] = _toggle_nn_backlash
-  handlers['h'] = _print_help
-
   modes['idle'] = __idle
-
-  state.handlers = handlers
+  state.handlers = init_default_handlers()
   state.modes = modes
   state.onclose = onclose
   state.params = params
 
-  # Examples of installing new functions
+  add_snapping_function(state)
   add_moving_function(state)
-  add_recording_function(state)
-  add_tuning_function(state)
-  add_safe_move_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:

@@ -1,7 +1,3 @@
-from tycho_env.utils import CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
-import numpy as np
-from time import time
-
 ################################################################################
 # Tuning
 # ------------------------------------------------------------------------------
@@ -12,6 +8,10 @@ from time import time
 # - Rotate Base
 #    Command Joint 0 at a constant velocity. Require pressing swing/step first.
 ###########################################################
+
+from tycho_env.utils import CHOPSTICK_CLOSE, CHOPSTICK_OPEN, print_and_cr
+import numpy as np
+from time import time
 
 OPEN_LIMIT = CHOPSTICK_OPEN - 0.02
 CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
@@ -35,7 +35,6 @@ def add_tuning_function(state):
   state.handlers['b'] = _rotate_base
   state.modes['rotate'] = __rotate
   state.last_tuned_joint = None
-  pass
 
 def _rotate_base(key, state):
   state.lock()

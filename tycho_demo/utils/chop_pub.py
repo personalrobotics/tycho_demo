@@ -8,8 +8,10 @@ from geometry_msgs.msg import Pose, Point, Quaternion
 from tycho_env.utils import q_mult, q_inv
 from tycho_demo_ros.msg import ChopPose
 
-HALF_CHOPSTICKS_LENGTH_M = 0.23 / 2 	# For visualization purpose
-					# No need to be super accurate
+# For visualization purpose, set the half chopsticks length
+# (meters)
+# No need to be super accurate
+HALF_CHOPSTICKS_LENGTH_M = 0.23 / 2
 
 class ChopPosePublisher():
   def __init__(self, topic_name, queue_size=20):
@@ -49,12 +51,13 @@ class ChopPublisher:
 
   def __init__(self, publishPoints=False):
     self.pub = rospy.Publisher("Chopstick", Marker, queue_size=10)
-    self.markerTop = self._make_chop_marker(1, )
+    self.markerTop = self._make_chop_marker(1)
     self.markerBottom = self._make_chop_marker(2)
     if publishPoints: # For Debug
-      self.markerPoints = [self._make_point_marker(3),
-                           self._make_point_marker(4),
-                           self._make_point_marker(5)]
+      self.markerPoints = [
+        self._make_point_marker(3),
+        self._make_point_marker(4),
+        self._make_point_marker(5)]
 
   def _make_chop_marker(self, my_id):
     marker = Marker()
