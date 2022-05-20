@@ -22,7 +22,7 @@ from tycho_env import ResEstimator
 from tycho_env.utils import get_res_estimator_path
 
 
-from tycho_env import arm_container, Smoother, TychoController
+from tycho_env import arm_container, Smoother, TychoController, IIRFilter
 from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
@@ -39,7 +39,7 @@ from .tuning import add_tuning_function
 from .safe_move import add_safe_move_function
 
 # Feedback frequency (100 * x) Hz
-FEEDBACK_FREQUENCY = 2
+FEEDBACK_FREQUENCY = 1
 
 # Cameras
 DEFAULT_CAMERAS = ['435', '415_1', '415_2']
@@ -136,10 +136,12 @@ def init_robotarm():
   # initialize the arm
   controller_gains_xml_file = get_gains_path()
   directPWM_xml_file = get_gains_path('-directPWM')
+  print_and_cr("Defaulting to hardware PID controller.")
+  hardwarePID_xml_file = get_gains_path("-hardwarePID")
 
   try:
     arm = arm_container.create_robot(dof=7)
-    load_gain(arm.group, directPWM_xml_file)
+    load_gain(arm.group, hardwarePID_xml_file)
   except:
     print("Unexpected error:", sys.exc_info()[0])
     print(colors.bg.red + "Cannot load the arm modules. Are all modules on?" + colors.reset)
@@ -147,7 +149,7 @@ def init_robotarm():
 
   state = State(arm, controller_gains_xml_file)
   state.controller = TychoController(controller_gains_xml_file, False)
-  state.use_factory_controller = False
+  state.use_factory_controller = True
   return state, controller_gains_xml_file, directPWM_xml_file
 
 def setup_nn_residual(state):
@@ -229,7 +231,8 @@ def send_command_controller(state, timestamp=None):
 def command_proc(state):
   group = state.arm.group
   group.feedback_frequency = 100.0 * FEEDBACK_FREQUENCY
-  state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE)
+  state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
+  state.joint_smoother = IIRFilter(np.array([1., 0.75, 0.4, 0.2, 1., 0.2, 1.]))
 
   num_modules = group.size
   feedback = hebi.GroupFeedback(num_modules)
@@ -283,12 +286,12 @@ def command_proc(state):
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
-      # if all(pos is not None for pos in command_pos):
-        # if False and is_ik_jumping(state, command_pos):
-        #   command_pos = state.command_smoother.get()
-        # else:
-        #   state.command_smoother.append(command_pos)
-        #   command_pos = state.command_smoother.get()
+      if all(pos is not None for pos in command_pos):
+        if is_ik_jumping(state, command_pos):
+          command_pos = state.joint_smoother.get()
+        else:
+          state.joint_smoother.append(command_pos)
+          command_pos = state.joint_smoother.get()
       update_command(state, command_pos, command_vel)
       if state.use_factory_controller:
         send_command(state, feedback.hardware_receive_time)
