@@ -15,7 +15,6 @@ import os
 
 from tycho_env.utils import print_and_cr, colors
 from subprocess import Popen, STDOUT
-from multiprocessing import Process
 from time import strftime, localtime, sleep
 
 # Singleton
@@ -47,7 +46,7 @@ def add_recording_function(state):
 
 def _record(key, state):
   if state.rosbag_recording_to: # Stop recording if it has been running
-    Process(target=stop_rosbag_recording).start()
+    stop_rosbag_recording()
     state.rosbag_recording_to = False
   else:                         # Start recording
     rosbag_recording_to = os.path.join(
@@ -55,8 +54,7 @@ def _record(key, state):
       strftime('%y-%m-%d-%H-%M-%S', localtime()))
     state.rosbag_recording_to = True
     state.last_rosbag = rosbag_recording_to
-    Process(target=start_rosbag_recording,
-            args=(rosbag_recording_to, state.ros_record_topics)).start()
+    start_rosbag_recording(rosbag_recording_to, state.ros_record_topics)
 
 def _delete_recording(key, state):
   if state.rosbag_recording_to: # Stop recording
@@ -82,7 +80,8 @@ def start_rosbag_recording(record_prefix, pose_topics, cameras=DEFAULT_CAMERAS):
     os.path.basename(record_prefix)))
   args1 = ['rosbag', 'record'] + pose_topics + \
           ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
-  ROSBAG_PROC = [Popen(args1, stdout=FNULL, stderr=STDOUT)]
+  ROSBAG_PROC.clear()
+  ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
   for _camera in cameras:
       args2 = ['rosbag', 'record',
                '/'+_camera+'/color/image_raw/compressed',
@@ -96,11 +95,12 @@ def start_rosbag_recording(record_prefix, pose_topics, cameras=DEFAULT_CAMERAS):
       #rosbag_writer_cameras.append(Popen(args3, stdout=FNULL, stderr=STDOUT))
 
 def stop_rosbag_recording(cameras=DEFAULT_CAMERAS):
-  print_and_cr(colors.bg.lightgrey + 'Stop rosbag recording' + colors.reset)
+  print_and_cr(colors.bg.lightgrey + f'Stop rosbag recording ({len(ROSBAG_PROC)} subprocs)' + colors.reset)
   for p in ROSBAG_PROC:
     p.terminate()
   for p in ROSBAG_PROC:
     p.kill()
+  ROSBAG_PROC.clear()
   args1 = ['rosnode', 'kill', '/pose_bag']
   rosbag_killer = Popen(args1, stdout=FNULL, stderr=STDOUT)
   for _camera in cameras:
