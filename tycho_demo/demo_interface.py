@@ -248,11 +248,11 @@ def command_proc(state):
     state.lock()
     # Update feedback
     feedback.get_position(state.current_position)
-    state.current_position += OFFSET_JOINTS
-
     if state.use_nn_backlash:
+      state.uncorrected_pos = state.current_position.copy() + OFFSET_JOINTS
       state.current_position[:6] += \
           state.res_estimator.predict(state.current_position[0:6])
+    state.current_position += OFFSET_JOINTS
 
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
@@ -380,6 +380,7 @@ def _toggle_nn_backlash(key, state):
   state.lock()
   if state.res_estimator is not None:
     state.use_nn_backlash = not state.use_nn_backlash
+    state.uncorrected_pos = None
     print_and_cr("NN backlash is %s" %
                 ("on" if state.use_nn_backlash else "off"))
     state.unlock()
