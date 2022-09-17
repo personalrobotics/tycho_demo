@@ -26,12 +26,14 @@ def add_recording_function(state):
   state.handlers['r'] = _record
   state.handlers['D'] = _delete_recording
   state.handlers['R'] = _count_recording
+  state.handlers['f'] = _failure_label
   state.rosbag_recording_to = False
   state.ros_record_topics = [
       '/joint_states', '/joint_commands',
       '/MocapPointArray',
       '/Choppose', '/Choppose_target',
-      '/Ball/point',
+      '/Ball/point', '/R0/point',
+      '/R1/point', '/R2/point'
       ]
   state.onclose.append(_stop_recording_on_quit)
 
@@ -72,6 +74,14 @@ def _count_recording(key, state):
 def _stop_recording_on_quit(state):
   if state.rosbag_recording_to:
     stop_rosbag_recording()
+
+
+def _failure_label(key, state):
+  if state.rosbag_recording_to: # Stop recording
+    stop_rosbag_recording()
+    state.rosbag_recording_to = False
+  if state.last_rosbag is not None:
+    label_failure_demo(state.last_rosbag)
 
 # ------------------------------------------------------------------------------
 
@@ -117,3 +127,18 @@ def delete_recording(rosbag_recording_to, cameras=DEFAULT_CAMERAS):
     while not os.path.isfile(fn):
       sleep(0.05)
     os.remove(fn)
+
+def label_failure_demo(rosbag_recording_to, cameras=DEFAULT_CAMERAS):
+  print_and_cr(colors.bg.red + 'Re-label rosbag recording' + colors.reset)
+  list_fn = [rosbag_recording_to+'-pose.bag'] + [
+    rosbag_recording_to+'-camera_'+_camera+'.bag' for _camera in cameras]
+  for fn in list_fn:
+    while not os.path.isfile(fn):
+      sleep(0.05)
+    split_fn = fn.split('/')
+    tmp = split_fn[-1]
+    tmp = tmp.split('-')
+    tmp[-1] = 'fail-'+tmp[-1]
+    split_fn[-1] = '-'.join(tmp)
+    cmd = "mv {} {}".format(fn, '/'.join(split_fn))
+    os.system(cmd)

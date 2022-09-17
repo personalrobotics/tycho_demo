@@ -7,7 +7,11 @@ function launcher {
     else
         echo "Creating a new tmux session: $1"
 	tmux new-session -d -s $1
-	tmux send -t $1 "source $(catkin locate)/devel/setup.zsh && $2$(printf \\r)"
+    if [ "$1" = 'azcam' ]   ; then
+        tmux send -t $1 "source /home/prl/azcam_ws/devel/setup.zsh && source $(catkin locate)/devel/setup.zsh --extend && $2$(printf \\r)"
+    else
+	   tmux send -t $1 "source $(catkin locate)/devel/setup.zsh && $2$(printf \\r)"
+    fi
     fi
 }
 

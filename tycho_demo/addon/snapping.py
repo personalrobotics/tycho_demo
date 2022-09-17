@@ -25,6 +25,7 @@ CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
 def add_snapping_function(state):
   state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
   state.modes[MOVING_MODE] = __move
+  state.modes["resetting"] = __move2
 
 def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.lock()
@@ -55,6 +56,7 @@ def __move(state, cur_time):
   return list(pos), [None] * 7
 
 def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
+  # import pdb;pdb.set_trace()
   num_points = len(_positions) + 3
   time_span = per_step_time * len(_positions)
   time_vector = np.empty(num_points, dtype=np.float64)
@@ -67,7 +69,9 @@ def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
   positions[:,0] = cur_positions
   positions[:,1] = cur_positions
   force_open = positions[-1, 1] + 0.02
-  positions[-1,1] = np.clip(force_open, OPEN_LIMIT, CLOSE_LIMIT)
+  # positions[-1,1] = np.clip(force_open, OPEN_LIMIT, CLOSE_LIMIT)
+  positions[-1,0] = -0.24
+  positions[-1,1] = -0.24
   # ? why does the generated trajectory makes the last joint move a lot?
   for i in range(len(_positions)):
     positions[:,i+2] = _positions[i]
@@ -77,4 +81,43 @@ def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
   return hebi.trajectory.create_trajectory(time_vector, positions, velocities)
 
 
+def __move2(state, cur_time):
+  if state.trajectory is None:
+    state.trajectory_start = cur_time
+    state.trajectory = create_moving_trajectory2(
+      state.current_position, state.moving_positions, per_step_time=state.per_step_time)
+  elapse_time = cur_time - state.trajectory_start
+  if elapse_time > state.trajectory.duration:
+    # allows other modes programmatic access to moving mode
+    if state.return_mode and elapse_time >= 1.1 * state.trajectory.duration:
+      state.mode = state.return_mode
+    return state.moving_positions[-1], [None] * 7
+  pos, _, _ = state.trajectory.get_state(elapse_time)
+  return list(pos), [None] * 7
 
+def create_moving_trajectory2(cur_positions, _positions, per_step_time=3.0):
+  # import pdb;pdb.set_trace()
+  num_points = len(_positions) + 3
+  time_span = per_step_time * len(_positions)
+  time_vector = np.empty(num_points, dtype=np.float64)
+  positions = np.empty((7, num_points), dtype=np.float64)
+  velocities = np.zeros_like(positions)
+
+  time_vector[0] = 0
+  time_vector[1:-1] = 0.2 + np.linspace(0, time_span, num=num_points-2)
+  time_vector[-1] = 0.2 + time_span + 0.5
+  positions[:,0] = cur_positions
+  positions[:,1] = cur_positions
+  force_open = positions[-1, 1] + 0.02
+  # positions[-1,1] = np.clip(force_open, OPEN_LIMIT, CLOSE_LIMIT)
+  positions[-1,0] = -0.24
+  positions[-1,1] = -0.24
+  # ? why does the generated trajectory makes the last joint move a lot?
+  for i in range(len(_positions)):
+    positions[:,i+2] = _positions[i]
+  positions[:,-1] = _positions[-1]
+  velocities[:, 1:-1] = np.nan
+  positions[-1,-1] = -0.23
+  # print_and_cr(f'time:{time_vector}')
+  # print_and_cr(f'positions:{positions}')
+  return hebi.trajectory.create_trajectory(time_vector, positions, velocities)

@@ -23,6 +23,8 @@ def add_moving_function(state):
 
 def do_move(state, target_joint_pos, total_time, return_mode=None):
     moving_positions = state.joint_rrt.plan(state.current_position, target_joint_pos)
+    for i in range(len(moving_positions)):
+        moving_positions[i][-1] = -0.24
     do_snapping(state, moving_positions, total_time, return_mode=return_mode)
 
 def _move(key, state):

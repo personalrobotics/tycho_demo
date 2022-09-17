@@ -35,7 +35,7 @@ from tycho_demo.keyboard import getch
 from tycho_demo.addon import add_snapping_function, add_moving_function
 
 # Feedback frequency (100 * x) Hz
-FEEDBACK_FREQUENCY = 1
+FEEDBACK_FREQUENCY = 20
 
 # Cameras
 DEFAULT_CAMERAS = ['435', '415_1', '415_2']
@@ -226,7 +226,7 @@ def send_command_controller(state, timestamp=None):
 
 def command_proc(state):
   group = state.arm.group
-  group.feedback_frequency = 100.0 * FEEDBACK_FREQUENCY
+  group.feedback_frequency = FEEDBACK_FREQUENCY
   state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
   state.joint_smoother = IIRFilter(np.array([1., 0.75, 0.4, 0.2, 1., 0.2, 1.]))
 
@@ -266,7 +266,7 @@ def command_proc(state):
       send_command_controller(state, feedback.hardware_receive_time)
 
     counter += 1
-    if counter % FEEDBACK_FREQUENCY != 0:
+    if counter % 1!= 0:
       state.unlock()
       continue
 
@@ -425,7 +425,7 @@ def run_demo(callback_func=None, params=None):
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
   setup_nn_residual(state)
-  state.use_nn_backlash = False
+  state.use_nn_backlash = True # TODO: default to true?
 
   # Basic demo functions
   modes = {}
