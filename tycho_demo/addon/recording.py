@@ -92,6 +92,7 @@ def start_rosbag_recording(record_prefix, pose_topics, cameras=DEFAULT_CAMERAS):
           ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
   ROSBAG_PROC.clear()
   ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
+
   for _camera in cameras:
       args2 = ['rosbag', 'record',
                '/'+_camera+'/color/image_raw/compressed',

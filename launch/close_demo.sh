@@ -6,3 +6,4 @@ tmux kill-session -t rs_camera_415_1
 tmux kill-session -t rs_camera_415_2
 tmux kill-session -t azcam
 tmux kill-session -t mocap
+tmux kill-session -t ball_pub

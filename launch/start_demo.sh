@@ -19,10 +19,33 @@ source $(rospack find tycho_demo_ros)/launch/optitrack_transform.sh
 # 4. camera
 source $(rospack find tycho_demo_ros)/launch/ros_camera.sh
 
-# 5. mocap
-echo "\033[94mPlace Optitrack Points to be at initialization position!\n... then, press enter to continue\033[0m"
-read -n 1 k <&1
-launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/mocap.yaml"
+launch_mocap() {
+	echo "\033[94mPlace Optitrack Points to be at initialization position!\n... then, press enter to continue\033[0m"
+	read -n 1 k <&1
+	launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/mocap.yaml"
+}
+
+# 5. ball tracker
+launched_tracker="false"
+while getopts "co" flag; do
+	case "${flag}" in
+		c)
+			launched_tracker="true"
+			launcher "azcam" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
+			tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
+			;;
+		o)
+			launched_tracker="true"
+			launch_mocap
+			;;
+	esac
+done
+
+if [[ "$launched_tracker" != "true" ]]
+then
+	echo "Defaulting to optitrack"
+	launch_mocap
+fi
 
 echo "Preparation done; You can view the robot in RViz. "
 echo "Ready to launch demo script."
