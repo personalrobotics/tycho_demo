@@ -1,9 +1,19 @@
+kill_tmux_if_running() {
+	tmux has-session -t $1 2>/dev/null
+	if [ "$?" -eq 0 ] ; then
+		tmux kill-session -t $1
+	fi
+}
+
 tmux kill-session -t core
 tmux kill-session -t tycho_description
 tmux kill-session -t tycho_transform
-tmux kill-session -t rs_camera_435
-tmux kill-session -t rs_camera_415_1
-tmux kill-session -t rs_camera_415_2
-tmux kill-session -t azcam
-tmux kill-session -t mocap
-tmux kill-session -t ball_pub
+kill_tmux_if_running rs_camera_435
+kill_tmux_if_running rs_camera_415_1
+kill_tmux_if_running rs_camera_415_2
+kill_tmux_if_running azcam
+kill_tmux_if_running mocap
+kill_tmux_if_running ball_pub
+kill_tmux_if_running azcam_ir_undistort
+kill_tmux_if_running azcam_rgb_undistort
+kill_tmux_if_running azcam_depth_to_rgb_undistort
