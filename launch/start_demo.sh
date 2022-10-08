@@ -25,22 +25,30 @@ launch_mocap() {
 	launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/mocap.yaml"
 }
 
+launch_cam() {
+	launcher "azcam" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
+	launcher "azcam_ir_undistort" "ROS_NAMESPACE=azcam_front/ir rosrun image_proc image_proc"
+	launcher "azcam_rgb_undistort" "ROS_NAMESPACE=azcam_front/rgb rosrun image_proc image_proc"
+	launcher "azcam_depth_to_rgb_undistort" "ROS_NAMESPACE=azcam_front/depth_to_rgb rosrun image_proc image_proc"
+	tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
+}
+
 # 5. ball tracker
 launched_tracker="false"
-while getopts "co" flag; do
+while getopts "aco" flag; do
 	case "${flag}" in
 		c)
 			launched_tracker="true"
-			launcher "azcam" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
-			launcher "azcam_ir_undistort" "ROS_NAMESPACE=azcam_front/ir rosrun image_proc image_proc"
-			launcher "azcam_rgb_undistort" "ROS_NAMESPACE=azcam_front/rgb rosrun image_proc image_proc"
-			launcher "azcam_depth_to_rgb_undistort" "ROS_NAMESPACE=azcam_front/depth_to_rgb rosrun image_proc image_proc"
-			tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
+			launch_cam
 			;;
 		o)
 			launched_tracker="true"
 			launch_mocap
 			;;
+		a)
+			launched_tracker="true"
+			launch_cam
+			launch_mocap
 	esac
 done
 
