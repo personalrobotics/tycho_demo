@@ -30,7 +30,9 @@ launch_cam() {
 	launcher "azcam_ir_undistort" "ROS_NAMESPACE=azcam_front/ir rosrun image_proc image_proc"
 	launcher "azcam_rgb_undistort" "ROS_NAMESPACE=azcam_front/rgb rosrun image_proc image_proc"
 	launcher "azcam_depth_to_rgb_undistort" "ROS_NAMESPACE=azcam_front/depth_to_rgb rosrun image_proc image_proc"
-	tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
+	if [ "$1" = "true" ] ; then
+		tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
+	fi
 }
 
 # 5. ball tracker
@@ -39,7 +41,7 @@ while getopts "aco" flag; do
 	case "${flag}" in
 		c)
 			launched_tracker="true"
-			launch_cam
+			launch_cam "true"
 			;;
 		o)
 			launched_tracker="true"
@@ -47,7 +49,7 @@ while getopts "aco" flag; do
 			;;
 		a)
 			launched_tracker="true"
-			launch_cam
+			launch_cam "false"
 			launch_mocap
 	esac
 done
