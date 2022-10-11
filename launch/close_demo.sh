@@ -14,6 +14,4 @@ kill_tmux_if_running rs_camera_415_2
 kill_tmux_if_running azcam
 kill_tmux_if_running mocap
 kill_tmux_if_running ball_pub
-kill_tmux_if_running azcam_ir_undistort
-kill_tmux_if_running azcam_rgb_undistort
-kill_tmux_if_running azcam_depth_to_rgb_undistort
+kill_tmux_if_running azcam_undistort

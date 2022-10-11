@@ -27,9 +27,7 @@ launch_mocap() {
 
 launch_cam() {
 	launcher "azcam" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
-	launcher "azcam_ir_undistort" "ROS_NAMESPACE=azcam_front/ir rosrun image_proc image_proc"
-	launcher "azcam_rgb_undistort" "ROS_NAMESPACE=azcam_front/rgb rosrun image_proc image_proc"
-	launcher "azcam_depth_to_rgb_undistort" "ROS_NAMESPACE=azcam_front/depth_to_rgb rosrun image_proc image_proc"
+	launcher "azcam_undistort" "roslaunch tycho_demo_ros undistort_azcam.launch --wait"
 	if [ "$1" = "true" ] ; then
 		tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
 	fi
