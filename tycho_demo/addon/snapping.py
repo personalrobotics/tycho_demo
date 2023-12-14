@@ -38,7 +38,7 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.unlock()
 
 def _move(key, state):
-  print_and_cr('Move to a predefined sets of positions')
+  print_and_cr('Move to a predefined sets of positions ' + np.array2string(np.array(MOVING_POSITION), precision=3))
   do_snapping(state, [MOVING_POSITION], 7.0 if key == SLOW_MOVING_KEY else 3.0)
 
 def __move(state, cur_time):

@@ -20,7 +20,7 @@ from time import strftime, localtime, sleep
 # Singleton
 FNULL = open(os.devnull, 'w')
 ROSBAG_PROC = []
-DEFAULT_CAMERAS = ['435','415_1','415_2']
+DEFAULT_CAMERAS = ['kinect']
 
 def add_recording_function(state):
   state.handlers['r'] = _record
@@ -33,7 +33,8 @@ def add_recording_function(state):
       '/MocapPointArray',
       '/Choppose', '/Choppose_target',
       '/Ball/point', '/R0/point',
-      '/R1/point', '/R2/point'
+      '/R1/point', '/R2/point',
+      '/azcam_front/rgb/image_raw/compressed'
       ]
   state.onclose.append(_stop_recording_on_quit)
 
@@ -88,14 +89,14 @@ def _failure_label(key, state):
 def start_rosbag_recording(record_prefix, pose_topics, cameras=DEFAULT_CAMERAS):
   print_and_cr(colors.bg.green + 'Recording to rosbag {}'.format(
     os.path.basename(record_prefix)))
-  args1 = ['rosbag', 'record'] + pose_topics + \
+  args1 = ['rosbag', 'record'] + pose_topics[:-1] + \
           ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
   ROSBAG_PROC.clear()
   ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
 
   for _camera in cameras:
       args2 = ['rosbag', 'record',
-               '/'+_camera+'/color/image_raw/compressed',
+               pose_topics[-1],
                '-O', record_prefix+'-camera_'+_camera+'.bag',
                '__name:=camera_'+_camera+'_bag']
       ROSBAG_PROC.append(Popen(args2, stdout=FNULL, stderr=STDOUT))
