@@ -13,10 +13,7 @@ sleep 2s
 # 2. tycho description (for Rviz)
 pr_ros_launcher "tycho_description" "tycho_description" "robot_chopsticks.launch"
 
-# 3. transform (for Rviz)
-source $(rospack find tycho_demo_ros)/launch/optitrack_transform.sh
-
-# 4. cameras and perception
+# 3. cameras and perception
 
 print_usage() {
   printf "\033[1;33mYou launched no camera or perception system.\033[0m\n"
@@ -27,7 +24,7 @@ print_usage() {
 
 while getopts 'abor' flag; do
 	case "${flag}" in
-		o) source $(rospack find tycho_demo_ros)/launch/mocap.sh ;;
+		o) source $(rospack find tycho_demo_ros)/launch/optitrack.sh ;;
 		r) source $(rospack find tycho_demo_ros)/launch/realsense_camera.sh ;;
 		a) source $(rospack find tycho_demo_ros)/launch/az_camera.sh ;;
 		p) tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py" ;;
