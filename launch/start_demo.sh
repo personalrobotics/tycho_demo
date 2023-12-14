@@ -22,6 +22,7 @@ print_usage() {
   printf "\n"
 }
 
+no_args='true'
 while getopts 'abor' flag; do
 	case "${flag}" in
 		o) source $(rospack find tycho_demo_ros)/launch/optitrack.sh ;;
@@ -30,9 +31,10 @@ while getopts 'abor' flag; do
 		p) tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py" ;;
 		*) print_usage ;;
 	esac
+	no_args='false'
 done
 
-if [ $OPTIND -eq 1 ]; then print_usage; fi
+[[ "$no_args" == "true" ]] && { print_usage }
 
 echo "Preparation done; You can view the robot in RViz. "
 echo "Ready to launch demo script."
