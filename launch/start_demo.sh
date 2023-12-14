@@ -10,53 +10,32 @@ source $(rospack find tycho_demo_ros)/launch/tmux_launcher.sh
 launcher "core" "roscore"
 sleep 2s
 
-# 2. tycho description
+# 2. tycho description (for Rviz)
 pr_ros_launcher "tycho_description" "tycho_description" "robot_chopsticks.launch"
 
-# 3. transform
+# 3. transform (for Rviz)
 source $(rospack find tycho_demo_ros)/launch/optitrack_transform.sh
 
-# 4. camera
-source $(rospack find tycho_demo_ros)/launch/ros_camera.sh
+# 4. cameras and perception
 
-launch_mocap() {
-	echo "\033[94mPlace Optitrack Points to be at initialization position!\n... then, press enter to continue\033[0m"
-	read -n 1 k <&1
-	launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/mocap.yaml"
+print_usage() {
+  printf "\033[1;33mYou launched no camera or perception system.\033[0m\n"
+  printf "To specify what perception to use: source ./start_demo.sh -o\n"
+  printf "args: a(azure kinect), p(point pub from azure), o(optitrack), r(realsense)."
+  printf "\n"
 }
 
-launch_cam() {
-	launcher "azcam" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
-	launcher "azcam_undistort" "roslaunch tycho_demo_ros undistort_azcam.launch --wait"
-	if [ "$1" = "true" ] ; then
-		tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py"
-	fi
-}
-
-# 5. ball tracker
-launched_tracker="false"
-while getopts "aco" flag; do
+while getopts 'abor' flag; do
 	case "${flag}" in
-		c)
-			launched_tracker="true"
-			launch_cam "true"
-			;;
-		o)
-			launched_tracker="true"
-			launch_mocap
-			;;
-		a)
-			launched_tracker="true"
-			launch_cam "false"
-			launch_mocap
+		o) source $(rospack find tycho_demo_ros)/launch/mocap.sh ;;
+		r) source $(rospack find tycho_demo_ros)/launch/realsense_camera.sh ;;
+		a) source $(rospack find tycho_demo_ros)/launch/az_camera.sh ;;
+		p) tmux new -d -s ball_pub "python $(rospack find tycho_demo_ros)/../tycho_perception/src/camera_ball_publisher.py" ;;
+		*) print_usage ;;
 	esac
 done
 
-if [[ "$launched_tracker" != "true" ]]
-then
-	echo "Defaulting to optitrack"
-	launch_mocap
-fi
+if [ $OPTIND -eq 1 ]; then print_usage; fi
 
 echo "Preparation done; You can view the robot in RViz. "
 echo "Ready to launch demo script."
