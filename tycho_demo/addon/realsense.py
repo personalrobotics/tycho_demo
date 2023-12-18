@@ -14,6 +14,7 @@ CAM_WIDTH = 640
 CAM_HEIGHT = 480
 CAM_FPS = 30
 NUM_WRITERS = 8
+DEVICE_SERIALS = ["101622070870", "815412070907", "818312070212"]
 
 def add_camera_function(state):
     state.is_logging_to = None
@@ -22,27 +23,24 @@ def add_camera_function(state):
         target=record_camera,
         args=(state.cam_recorder_queue, NUM_WRITERS)).start()
 
-    state.cameras = RealSense(state)
+    state.realsense_cameras = RealSense(state)
     state.onclose.append(close_cameras)
     state.handlers['C'] = debug_update_camera_fps              # FOR DEBUG
-    state.handlers['D'] = debug_camera_connection               # FOR DEBUG
+    state.handlers['D'] = debug_camera_connection              # FOR DEBUG
 
 class RealSense:
     """ Wrapper that implements boilerplate code for RealSense cameras """
 
     def __init__(self, state):
-        # TODO read initialization from a config file
-
         self.device_ls = []
         for cam in rs.context().query_devices():
             self.device_ls.append(cam.get_info(rs.camera_info(1)))
         self.device_ls.sort()
 
-        desired_device_ls = ["101622070870", "815412070907", "818312070212"]
-        for device in desired_device_ls:
+        for device in DEVICE_SERIALS:
             assert(device in self.device_ls)
 
-        self.device_ls = desired_device_ls
+        self.device_ls = list(DEVICE_SERIALS)
 
         # Start streaming
         print_and_cr(f"Connecting to RealSense cameras ({len(self.device_ls)} found) ...")
@@ -86,7 +84,6 @@ class RealSense:
     #def terminate_logging(self, state):
     #    state.cam_recorder_queue.put(None)
     #    state.is_logging_to = None
-
 
     #def close_logger(self, state):
     #    #print(f"[DEBUG] Closing camera logger")
@@ -170,7 +167,7 @@ def record_camera(proc_queue, num_writers):
 
 def debug_update_camera_fps(key_pressed, state):
     """ Print the FPS for each camera"""
-    for device_id in state.cameras.device_ls:
+    for device_id in state.realsense_cameras.device_ls:
         counter = state.cam_counter[device_id]
         if len(counter) == 0:
             print_and_cr(f"{device_id} didn't receive any update")
@@ -202,7 +199,7 @@ def close_cameras(state):
     state.cam_recorder_queue.put(None)
     state.cam_recorder_queue.close()
     state.cam_recorder_queue.join_thread()
-    state.cameras.pull_thread.join() # (Optional for daemon=True threads)
+    state.realsense_cameras.pull_thread.join() # (Optional for daemon=True threads)
 
 
 if __name__ == "__main__":
