@@ -41,14 +41,21 @@ def _move(key, state):
 
 def __move(state, cur_time):
   if state.trajectory is None:
+    print_and_cr('Start moving / snapping')
+    state.lock()
     state.trajectory_start = cur_time
     state.trajectory = create_moving_trajectory(
 	    state.current_position, state.moving_positions, per_step_time=state.per_step_time)
+    state.unlock()
+
   elapse_time = cur_time - state.trajectory_start
   if elapse_time > state.trajectory.duration:
     # allows other modes programmatic access to moving mode
     if state.return_mode and elapse_time >= 1.1 * state.trajectory.duration:
+      print_and_cr('Finish moving / snapping and return to ' + state.return_mode)
+      state.lock()
       state.mode = state.return_mode
+      state.unlock()
     return state.moving_positions[-1], [None] * 7
   pos, _, _ = state.trajectory.get_state(elapse_time)
   return list(pos), [None] * 7

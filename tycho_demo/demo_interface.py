@@ -232,12 +232,11 @@ def command_proc(state):
     # Update feedback
     feedback.get_position(state.current_position)
     state.current_position += OFFSET_JOINTS
-
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
     state.ee_pose = state.arm.get_FK_ee(state.current_position)
     current_mode = state.mode
-    cur_time = time()
+    state.unlock()
 
     if not state._mute and not state.use_factory_controller:
       state.command_effort = \
@@ -246,17 +245,20 @@ def command_proc(state):
 
     counter += 1
     if counter % COUNTER_SKIP_FREQUENCY != 0:
-      state.unlock()
       continue
 
     # Print state info
     if state.print_state:
+      state.lock()
       state._print_state_fn()
+      state.unlock()
       state.print_state = False
 
     # Generating command
     assert current_mode in state.mode_keys
     command_pos, command_vel = state.modes[current_mode](state, time())
+
+    state.lock()
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
