@@ -7,7 +7,7 @@ kill_tmux_if_running() {
 
 tmux kill-session -t core
 tmux kill-session -t tycho_description
-kill_tmux_if_running kill-session -t tycho_transform
+kill_tmux_if_running tycho_transform
 kill_tmux_if_running rs_camera_435
 kill_tmux_if_running rs_camera_415_1
 kill_tmux_if_running rs_camera_415_2
