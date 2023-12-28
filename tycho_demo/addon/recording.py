@@ -31,8 +31,9 @@ def add_recording_function(state):
       '/joint_states', '/joint_commands',
       '/MocapPointArray',
       '/Choppose', '/Choppose_target',
-      '/Ball/point', '/R0/point',
-      '/R1/point', '/R2/point',
+      '/Ball/point', '/Ball/rot',
+      '/R0/point', '/R1/point',
+      '/R2/point',
       ]
   state.ros_record_dicts = {
     'camera_kinect': '/azcam_front/rgb/image_raw/compressed'

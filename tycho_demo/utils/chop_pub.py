@@ -112,9 +112,14 @@ class ChopPublisher:
     update_marker_pose(self.markerBottom, bottomPos, bottomOriXYZ, bottomOriW)
 
     # two-points chopstick
-    topNow = points[3] - points[4]
-    topNow /= np.linalg.norm(topNow)
-    topPos = points[3] - topNow * (HALF_CHOPSTICKS_LENGTH_M - 0.072) # center of chopstick
+    if points[3][0] > points[4][0]:
+      topNow = points[4] - points[3]
+      topNow /= np.linalg.norm(topNow)
+      topPos = points[4] - topNow * (HALF_CHOPSTICKS_LENGTH_M - 0.072) # center of chopstick
+    else:
+      topNow = points[3] - points[4]
+      topNow /= np.linalg.norm(topNow)
+      topPos = points[3] - topNow * (HALF_CHOPSTICKS_LENGTH_M - 0.072) # center of chopstick
     topOriXYZ  = np.cross(chopZero, topNow)
     topOriW = np.linalg.norm(topNow) * np.linalg.norm(chopZero) + np.dot(topNow, chopZero)
     update_marker_pose(self.markerTop, topPos, topOriXYZ, topOriW)
