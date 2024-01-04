@@ -68,11 +68,11 @@ markers:
     'T3': # the head of the chopsticks that are mounted with two markers
         topic_name: T3/point
         frame_id: optitrack
-        init_pos:  [0.260, -0.013, 0.541]
+        init_pos:  [0.340, -0.019, 0.485]
     'T4': # the tail of the chopsticks that are mounted with two markers
         topic_name: T4/point
         frame_id: optitrack
-        init_pos:  [0.457, -0.012, 0.540]
+        init_pos:  [0.538, -0.010, 0.488]
 
 optitrack_config:
         multicast_address: 239.255.42.99
