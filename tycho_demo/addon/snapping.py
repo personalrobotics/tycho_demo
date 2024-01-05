@@ -15,6 +15,7 @@ from functools import partial
 
 SLOW_MOVING_KEY = "M"
 FAST_MOVING_KEY = "m"
+FLAT_MOVING_KEY = "j"
 MOVING_MODE = "moving"
 
 OPEN_LIMIT = CHOPSTICK_OPEN - 0.02
@@ -22,6 +23,7 @@ CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
 
 def add_snapping_function(state):
   state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
+  state.handlers[FLAT_MOVING_KEY] = _flat_move
   state.modes[MOVING_MODE] = __move
 
 def do_snapping(state, moving_positions, total_time, return_mode=None):
@@ -34,6 +36,18 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.return_mode = return_mode
   state.per_step_time = total_time / len(moving_positions)
   state.unlock()
+
+def _flat_move(key, state):
+  import numpy as np
+  from tycho_env.utils import construct_choppose, construct_command
+  from scipy.spatial.transform import Rotation as scipyR
+  print_and_cr('Move to a predefined sets of positions')
+  moving_eepos = np.empty(8)
+  moving_eepos[:3] = [-0.22083452, -0.38280237, 0.10270547]
+  moving_eepos[3:7] = scipyR.from_rotvec([0., 180, 0.], degrees=True).as_quat()
+  moving_eepos[7] = state.current_position[-1]
+  jointpos = construct_command(state.arm, state.current_position, target_vector=moving_eepos)
+  do_snapping(state, [jointpos], 3.0)
 
 def _move(key, state):
   print_and_cr('Move to a predefined position ' + np.array2string(np.array(MOVING_POSITION), precision=3))
