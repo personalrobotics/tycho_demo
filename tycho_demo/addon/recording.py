@@ -65,10 +65,10 @@ def _record(key, state):
 
 def _delete_recording(key, state):
   if state.rosbag_recording_to: # Stop recording
-    stop_rosbag_recording(state.ros_record_topics)
+    stop_rosbag_recording(state.ros_record_dicts)
     state.rosbag_recording_to = False
   if state.last_rosbag is not None:
-    delete_recording(state.last_rosbag, state.ros_record_topics)
+    delete_recording(state.last_rosbag, state.ros_record_dicts)
     state.last_rosbag = None
 
 def _count_recording(key, state):
