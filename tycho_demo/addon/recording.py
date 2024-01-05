@@ -50,18 +50,7 @@ def add_recording_function(state):
     os.mkdir(state.save_record_folder)
 
 def _record(key, state):
-  if state.rosbag_recording_to: # Stop recording if it has been running
-    stop_rosbag_recording(state.ros_record_dicts)
-    state.rosbag_recording_to = False
-  else:                         # Start recording
-    rosbag_recording_to = os.path.join(
-      state.save_record_folder,
-      strftime('%y-%m-%d-%H-%M-%S', localtime()))
-    state.rosbag_recording_to = True
-    state.last_rosbag = rosbag_recording_to
-    start_rosbag_recording(rosbag_recording_to,
-      state.ros_record_topics,
-      state.ros_record_dicts)
+  toggle_rosbag_recording(state)
 
 def _delete_recording(key, state):
   if state.rosbag_recording_to: # Stop recording
@@ -139,3 +128,17 @@ def label_failure_demo(rosbag_recording_to, dict_topics):
     split_fn[-1] = '-'.join(new_fn)
     cmd = "mv {} {}".format(fn, '/'.join(split_fn))
     os.system(cmd)
+
+def toggle_rosbag_recording(state):
+  if state.rosbag_recording_to: # Stop recording if it has been running
+    stop_rosbag_recording(state.ros_record_dicts)
+    state.rosbag_recording_to = False
+  else:                         # Start recording
+    rosbag_recording_to = os.path.join(
+      state.save_record_folder,
+      strftime('%y-%m-%d-%H-%M-%S', localtime()))
+    state.rosbag_recording_to = True
+    state.last_rosbag = rosbag_recording_to
+    start_rosbag_recording(rosbag_recording_to,
+      state.ros_record_topics,
+      state.ros_record_dicts)
