@@ -64,7 +64,7 @@ markers:
     'Ball': # the marker ball to pick up
         topic_name: Ball/point
         frame_id: optitrack
-        init_pos: [0.569, 0.059, 0.42] # cube
+        init_pos: [0.482, -0.013, 0.422] # cube
     'T3': # the head of the chopsticks that are mounted with two markers
         topic_name: T3/point
         frame_id: optitrack

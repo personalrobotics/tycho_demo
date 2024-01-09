@@ -45,7 +45,7 @@ def _flat_move(key, state):
   moving_eepos = np.empty(8)
   moving_eepos[:3] = [-0.22083452, -0.38280237, 0.10270547]
   moving_eepos[3:7] = scipyR.from_rotvec([0., 180, 0.], degrees=True).as_quat()
-  moving_eepos[7] = state.current_position[-1]
+  moving_eepos[7] = -0.437
   jointpos = construct_command(state.arm, state.current_position, target_vector=moving_eepos)
   do_snapping(state, [jointpos], 3.0)
 
