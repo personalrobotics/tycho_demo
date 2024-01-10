@@ -6,3 +6,4 @@ from .replay_pose import add_replay_pose_function
 from .record_replay import add_record_replay_function
 from .tuning import add_tuning_function
 from .visualize import add_visualize_function
+from .grabbing import add_grabbing_function
