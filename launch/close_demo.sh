@@ -13,6 +13,7 @@ kill_tmux_if_running rs_camera_415_1
 kill_tmux_if_running rs_camera_415_2
 kill_tmux_if_running azcam
 kill_tmux_if_running mocap
+kill_tmux_if_running mocap_pose_pub
 kill_tmux_if_running ball_pub
 kill_tmux_if_running tag_detector
 kill_tmux_if_running azcam_undistort

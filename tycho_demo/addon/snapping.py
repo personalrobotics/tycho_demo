@@ -23,7 +23,7 @@ CLOSE_LIMIT =  CHOPSTICK_CLOSE + 0.02
 
 def add_snapping_function(state):
   state.handlers[FAST_MOVING_KEY] = state.handlers[SLOW_MOVING_KEY] = _move
-  state.handlers[FLAT_MOVING_KEY] = _flat_move
+  state.handlers[FLAT_MOVING_KEY] = state.handlers[FLAT_MOVING_KEY.upper()] = _flat_move
   state.modes[MOVING_MODE] = __move
 
 def do_snapping(state, moving_positions, total_time, return_mode=None):
@@ -43,7 +43,10 @@ def _flat_move(key, state):
   from scipy.spatial.transform import Rotation as scipyR
   print_and_cr('Move to a predefined sets of positions')
   moving_eepos = np.empty(8)
-  moving_eepos[:3] = [-0.22083452, -0.38280237, 0.10270547]
+  if key == FLAT_MOVING_KEY:
+    moving_eepos[:3] = [-0.13, -0.35, 0.1]
+  else:
+    moving_eepos[:3] = [-0.22083452, -0.38280237, 0.10270547]
   moving_eepos[3:7] = scipyR.from_rotvec([0., 180, 0.], degrees=True).as_quat()
   moving_eepos[7] = -0.437
   jointpos = construct_command(state.arm, state.current_position, target_vector=moving_eepos)
@@ -70,6 +73,8 @@ def __move(state, cur_time):
       state.lock()
       state.mode = state.return_mode
       state.unlock()
+      if state.return_mode == 'reinforce':
+        state.train_event.clear()
     return state.moving_positions[-1], [None] * 7
   pos, _, _ = state.trajectory.get_state(elapse_time)
   return list(pos), [None] * 7

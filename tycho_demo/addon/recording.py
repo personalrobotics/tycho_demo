@@ -14,11 +14,10 @@
 import os
 
 from tycho_env.utils import print_and_cr, colors
-from subprocess import Popen, STDOUT
+from subprocess import Popen, STDOUT, DEVNULL
 from time import strftime, localtime, sleep
 
 # Singleton
-FNULL = open(os.devnull, 'w')
 ROSBAG_PROC = []
 
 def add_recording_function(state):
@@ -31,6 +30,7 @@ def add_recording_function(state):
       '/joint_states', '/joint_commands',
       '/MocapPointArray',
       '/Choppose', '/Choppose_target',
+      'rigidbodies/1/pose',
       '/Ball/point', '/target/pose',
       '/R0/point', '/R1/point',
       '/R2/point',
@@ -84,14 +84,14 @@ def start_rosbag_recording(record_prefix, pose_topics, dict_topics):
   args1 = ['rosbag', 'record'] + pose_topics[:-1] + \
           ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
   ROSBAG_PROC.clear()
-  ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
+  ROSBAG_PROC.append(Popen(args1, stdout=DEVNULL))
 
   for topic in dict_topics.keys():
     args2 = ['rosbag', 'record',
              dict_topics[topic],
              '-O', record_prefix+'-'+topic+'.bag',
              '__name:='+topic+'_bag']
-    ROSBAG_PROC.append(Popen(args2, stdout=FNULL, stderr=STDOUT))
+    ROSBAG_PROC.append(Popen(args2, stdout=DEVNULL))
 
 def stop_rosbag_recording(dict_topics):
   print_and_cr(colors.bg.lightgrey + f'Stop rosbag recording ({len(ROSBAG_PROC)} subprocs)' + colors.reset)
@@ -101,10 +101,10 @@ def stop_rosbag_recording(dict_topics):
     p.kill()
   ROSBAG_PROC.clear()
   args1 = ['rosnode', 'kill', '/pose_bag']
-  rosbag_killer = Popen(args1, stdout=FNULL, stderr=STDOUT)
+  rosbag_killer = Popen(args1, stdout=DEVNULL)
   for topic in dict_topics.keys():
     args2 = ['rosnode', 'kill', '/'+topic+'_bag']
-    rosbag_killer = Popen(args2, stdout=FNULL, stderr=STDOUT)
+    rosbag_killer = Popen(args2, stdout=DEVNULL)
 
 def delete_recording(rosbag_recording_to, dict_topics):
   print_and_cr(colors.bg.red + 'Deleting rosbag recording' + colors.reset)

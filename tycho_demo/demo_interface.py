@@ -30,6 +30,7 @@ from tycho_demo.addon import add_snapping_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
+# set to 100 for faster data collection
 CMD_FREQUENCY = 20                  # How often to send command
 COUNTER_SKIP_FREQUENCY = int(ROBOT_FEEDBACK_FREQUENCY / CMD_FREQUENCY)
 
@@ -255,7 +256,7 @@ def command_proc(state):
       state.print_state = False
 
     # Generating command
-    assert current_mode in state.mode_keys
+    assert current_mode in state.mode_keys, f"Mode not recognized: {current_mode}"
     command_pos, command_vel = state.modes[current_mode](state, time())
 
     state.lock()
