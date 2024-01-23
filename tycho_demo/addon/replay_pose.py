@@ -84,16 +84,13 @@ def __replay(state, cur_time):
   actual_transform = np.hstack((actual_transform[0:3, 3], R.from_matrix(actual_transform[0:3, 0:3]).as_euler("xyz")))
   translation_error = np.linalg.norm(np.absolute(bottom_tip - actual_transform[0:3]))
   rot_error = np.linalg.norm(np.absolute(target_rot - actual_transform[3:6]))
-  # mujoco_pos_cmd = get_IK_from_mujoco(state.sim, state.current_position, target_transformation, target_open)
+  # pos_cmd = get_IK_from_mujoco(state.sim, state.current_position, target_transformation, target_open)
 
   # # Get the FK of the simulation
-  # _, actual_transform = state.sim.get_comparable_transformations()
-  print_and_cr(f"Target = {target_transform}")
-  print_and_cr(f"Actual = {actual_transform}")
+  # actual_transform = state.sim.get_FK()
 
-  translation_error = np.linalg.norm(bottom_tip - actual_transform[0:3])
-  print_and_cr(f"Translation error = {translation_error}")
-  rot_error = np.linalg.norm(target_rot - actual_transform[3:6])
+  # translation_error = np.linalg.norm(bottom_tip - actual_transform[0:3])
+  # rot_error = np.linalg.norm(target_rot - actual_transform[3:6]) % (2 * np.pi)
 
   # For logging purposes
   if np.all(target_points != 0):

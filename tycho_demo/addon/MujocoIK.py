@@ -1,5 +1,5 @@
 from tycho_env.utils import CHOPSTICK_CLOSE, CHOPSTICK_OPEN
-from mujoco_assets.TychoSim import TychoSim
+from tycho_demo.addon.TychoPhysics import TychoPhysics
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 
@@ -16,9 +16,11 @@ def get_IK_from_mujoco(sim, current_joint_position,
     bottom_tip = bottom_chop_middle_point + BOTTOM_TIP_DISTANCE * x_axis
 
     sim.set_joint_positions(current_joint_position)
-    sim.set_leader_position(bottom_tip, R.from_matrix(target_transformation[0:3,0:3]).as_euler("xyz"))
-    sim.run_simulation_iterations(NUM_ITERATION)
-    next_angles = sim.get_joint_positions()
+ 
+    rot = R.from_matrix(target_transformation[0:3,0:3]).as_euler("xyz")
+    real_rot = [-rot[2] - np.pi, -rot[1], rot[0] + np.pi / 2]
+
+    next_angles, error = sim.get_IK(bottom_tip, R.from_euler("xyz", real_rot).as_quat(), NUM_ITERATION)
     if target_open:
         next_angles[-1] = np.clip(target_open, CHOPSTICK_CLOSE, CHOPSTICK_OPEN)
     return next_angles
