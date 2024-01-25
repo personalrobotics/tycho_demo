@@ -129,6 +129,10 @@ def label_failure_demo(rosbag_recording_to, dict_topics):
     cmd = "mv {} {}".format(fn, '/'.join(split_fn))
     os.system(cmd)
 
+def set_rosbag_recording(state, enabled: bool):
+  if enabled != bool(state.rosbag_recording_to):
+    toggle_rosbag_recording(state)
+
 def toggle_rosbag_recording(state):
   if state.rosbag_recording_to: # Stop recording if it has been running
     stop_rosbag_recording(state.ros_record_dicts)
