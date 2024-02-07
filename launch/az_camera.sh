@@ -11,6 +11,6 @@ function az_launcher {
 }
 
 az_launcher "azcam_front" "roslaunch azure_kinect_ros_driver driver_azcam_front.launch fps:=30 color_resolution:=720P --wait"
-az_launcher "azcam_side" "roslaunch azure_kinect_ros_driver driver_azcam_side.launch fps:=30 color_resolution:=720P --wait"
+az_launcher "azcam_back" "roslaunch azure_kinect_ros_driver driver_azcam_back.launch fps:=30 color_resolution:=720P --wait"
 launcher "azcam_undistort_front" "roslaunch tycho_demo_ros azcam_undistort_front.launch --wait"
-launcher "azcam_undistort_side" "roslaunch tycho_demo_ros azcam_undistort_side.launch --wait"
+launcher "azcam_undistort_back" "roslaunch tycho_demo_ros azcam_undistort_back.launch --wait"
