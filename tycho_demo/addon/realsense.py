@@ -8,7 +8,7 @@ import queue
 from multiprocessing import Queue as MPQueue
 from multiprocessing import Process
 
-from franka_demo.utils import print_and_cr
+from tycho_env.utils import print_and_cr
 
 CAM_WIDTH = 640
 CAM_HEIGHT = 480
