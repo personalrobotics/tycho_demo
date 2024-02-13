@@ -30,8 +30,7 @@ from tycho_demo.addon import add_snapping_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
-CMD_FREQUENCY = 20                  # How often to send command
-COUNTER_SKIP_FREQUENCY = int(ROBOT_FEEDBACK_FREQUENCY / CMD_FREQUENCY)
+DEF_CMD_FREQUENCY = 100             # How often to send command
 
 #######################################################################
 # Rospy publisher and subscriber
@@ -244,7 +243,7 @@ def command_proc(state):
       send_command_controller(state, feedback.hardware_receive_time)
 
     counter += 1
-    if counter % COUNTER_SKIP_FREQUENCY != 0:
+    if counter % state.counter_skip_freq != 0:
       continue
 
     # Print state info
@@ -388,7 +387,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run_demo(callback_func=None, params=None):
+def run_demo(callback_func=None, params=None, cmd_freq=DEF_CMD_FREQUENCY):
   params = params or {}
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
@@ -401,6 +400,9 @@ def run_demo(callback_func=None, params=None):
   state.modes = modes
   state.onclose = onclose
   state.params = params
+
+  # Set command frequency
+  state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
   add_snapping_function(state)
 
