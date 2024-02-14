@@ -81,7 +81,7 @@ def _relabel_failure_recording(key, state):
 def start_rosbag_recording(record_prefix, pose_topics, dict_topics):
   print_and_cr(colors.bg.green + 'Recording to rosbag {}'.format(
     os.path.basename(record_prefix)))
-  args1 = ['rosbag', 'record'] + pose_topics[:-1] + \
+  args1 = ['rosbag', 'record'] + pose_topics + \
           ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
   ROSBAG_PROC.clear()
   ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
