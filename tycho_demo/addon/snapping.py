@@ -65,7 +65,6 @@ def __move(state, cur_time):
   elapse_time = cur_time - state.trajectory_start
   if elapse_time > state.trajectory.duration:
     # allows other modes programmatic access to moving mode
-    if state.return_mode == 'reinforce': state.train_event.clear()
     if state.return_mode and elapse_time >= 1.1 * state.trajectory.duration:
       print_and_cr('Finish moving / snapping and return to ' + state.return_mode)
       state.lock()
