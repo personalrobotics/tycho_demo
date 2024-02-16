@@ -64,15 +64,15 @@ markers:
     'Ball': # the marker ball to pick up
         topic_name: Ball/point
         frame_id: optitrack
-        init_pos: [0.199, -0.013, 0.401]
+        init_pos: [0.446, -0.013, 0.426] # cube
     'T3': # the head of the chopsticks that are mounted with two markers
         topic_name: T3/point
         frame_id: optitrack
-        init_pos:  [0.260, -0.013, 0.541]
+        init_pos:  [0.276, -0.012, 0.536]
     'T4': # the tail of the chopsticks that are mounted with two markers
         topic_name: T4/point
         frame_id: optitrack
-        init_pos:  [0.457, -0.012, 0.540]
+        init_pos:  [0.474, -0.011, 0.532]
 
 optitrack_config:
         multicast_address: 239.255.42.99

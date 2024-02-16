@@ -14,7 +14,7 @@ from tycho_demo_ros.msg import ChopPose
 #######################################################################
 
 REPLAY_INIT_THREAD = None
-TARGET_POSE_TOPIC = '/Choppose_target'
+TARGET_POSE_TOPIC = '/Choppose_target2'
 
 def add_replay_pose_function(state):
   state.handlers['p'] = _replay
@@ -29,6 +29,8 @@ def _replay(key, state):
   if (state.mode != 'replay' and
       (REPLAY_INIT_THREAD is None or not REPLAY_INIT_THREAD.isAlive())):
     print_and_cr("Entering replay mode ... initializing ...")
+    print_and_cr("Please remap rostopic with: ")
+    print_and_cr("rosbag play 22-07-19-23-35-32-pose.bag --topics /Choppose_target /Choppose_target:=/Choppose_target2")
     state.mode = 'wait_for_replay'
     state.fix_position = list(state.current_position)
     REPLAY_INIT_THREAD = Thread(target=init_replay_topic, args=(state,))

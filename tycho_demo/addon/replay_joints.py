@@ -4,6 +4,8 @@ from tycho_env.utils import print_and_cr
 import rospy
 from sensor_msgs.msg import JointState
 
+from tycho_env.utils import construct_choppose
+
 #######################################################################
 # Replay
 # ------------------------------------------------------------------------------
@@ -36,6 +38,8 @@ def __replay(state, cur_time):
   state._replay_lock.acquire()
   cmd = list(state.last_replay_cmd)
   state._replay_lock.release()
+  print_and_cr(f"Curr pose = {construct_choppose(state.arm, state.current_position)}")
+  print_and_cr(f"Target = {construct_choppose(state.arm, cmd)}")
   return cmd, [None] * 7
 
 def __wait_for_replay(state, cur_time):

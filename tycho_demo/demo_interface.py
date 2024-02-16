@@ -16,12 +16,6 @@ from sensor_msgs.msg import JointState
 # HEBI
 import hebi
 
-# Residual estimator import
-import torch
-from tycho_env import ResEstimator
-from tycho_env.utils import get_res_estimator_path
-
-
 from tycho_env import arm_container, Smoother, TychoController, IIRFilter
 from tycho_env.utils import (
   get_gains_path, load_gain,
@@ -32,13 +26,11 @@ from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function, add_moving_function
+from tycho_demo.addon import add_snapping_function
 
-# Feedback frequency (100 * x) Hz
-FEEDBACK_FREQUENCY = 1
-
-# Cameras
-DEFAULT_CAMERAS = ['435', '415_1', '415_2']
+# Feedback frequency (Hz)
+ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
+DEF_CMD_FREQUENCY = 100             # How often to send command
 
 #######################################################################
 # Rospy publisher and subscriber
@@ -148,16 +140,6 @@ def init_robotarm():
   state.use_factory_controller = True
   return state, controller_gains_xml_file, directPWM_xml_file
 
-def setup_nn_residual(state):
-  model_path = get_res_estimator_path()
-  print_and_cr("Loading residual estimator from %s" % model_path)
-  try:
-    device = torch.device("cpu") # TODO check if GPU can speed up
-    state.res_estimator = ResEstimator.static_load(model_path, device)
-    state.res_estimator.eval()
-  except:
-    print_and_cr("Cannot load residual estimator model")
-
 #######################################################################
 # Control loop that sends command to the arm
 #######################################################################
@@ -226,7 +208,7 @@ def send_command_controller(state, timestamp=None):
 
 def command_proc(state):
   group = state.arm.group
-  group.feedback_frequency = 100.0 * FEEDBACK_FREQUENCY
+  group.feedback_frequency = float(ROBOT_FEEDBACK_FREQUENCY) # Obtain update from the robot at this frequency
   state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
   state.joint_smoother = IIRFilter(np.array([1., 0.75, 0.4, 0.2, 1., 0.2, 1.]))
 
@@ -248,17 +230,12 @@ def command_proc(state):
     state.lock()
     # Update feedback
     feedback.get_position(state.current_position)
-    if state.use_nn_backlash:
-      state.uncorrected_pos = state.current_position.copy() + OFFSET_JOINTS
-      state.current_position[:6] += \
-          state.res_estimator.predict(state.current_position[0:6])
     state.current_position += OFFSET_JOINTS
-
     feedback.get_velocity(state.current_velocity)
     feedback.get_effort(state.current_effort)
     state.ee_pose = state.arm.get_FK_ee(state.current_position)
     current_mode = state.mode
-    cur_time = time()
+    state.unlock()
 
     if not state._mute and not state.use_factory_controller:
       state.command_effort = \
@@ -266,19 +243,21 @@ def command_proc(state):
       send_command_controller(state, feedback.hardware_receive_time)
 
     counter += 1
-    if counter % FEEDBACK_FREQUENCY != 0:
-      state.unlock()
+    if counter % state.counter_skip_freq != 0:
       continue
 
     # Print state info
     if state.print_state:
+      state.lock()
       state._print_state_fn()
+      state.unlock()
       state.print_state = False
 
     # Generating command
     assert current_mode in state.mode_keys
-    # TODO: ensure all modes to return command vels
     command_pos, command_vel = state.modes[current_mode](state, time())
+
+    state.lock()
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
@@ -376,17 +355,6 @@ def _print_state(key, state):
   state.print_state = True
   state.unlock()
 
-def _toggle_nn_backlash(key, state):
-  state.lock()
-  if state.res_estimator is not None:
-    state.use_nn_backlash = not state.use_nn_backlash
-    state.uncorrected_pos = None
-    print_and_cr("NN backlash is %s" %
-                ("on" if state.use_nn_backlash else "off"))
-    state.unlock()
-  else:
-    print_and_cr("Cannot turn on NN backlash: no model loaded")
-
 def _print_help(key, state):
   print_and_cr("Keypress Handlers:")
   keys = sorted(state.handlers.keys())
@@ -404,7 +372,6 @@ def init_default_handlers():
   handlers['z'] = _idle
   handlers['Z'] = _mute
   handlers['v'] = _print_state
-  handlers['o'] = _toggle_nn_backlash
   handlers['h'] = _print_help
   return handlers
 
@@ -420,12 +387,10 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run_demo(callback_func=None, params=None):
+def run_demo(callback_func=None, params=None, cmd_freq=0):
   params = params or {}
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
-  setup_nn_residual(state)
-  state.use_nn_backlash = False
 
   # Basic demo functions
   modes = {}
@@ -436,8 +401,11 @@ def run_demo(callback_func=None, params=None):
   state.onclose = onclose
   state.params = params
 
+  # Set command frequency
+  assert cmd_freq > 0, "Command frequency must be specified! (pass cmd_freq to run_demo())"
+  state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
+
   add_snapping_function(state)
-  add_moving_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:
@@ -473,4 +441,4 @@ def run_demo(callback_func=None, params=None):
 
 if __name__ == '__main__':
   rospy.init_node('tycho_demo_test')
-  run()
+  run_demo(cmd_freq=100)
