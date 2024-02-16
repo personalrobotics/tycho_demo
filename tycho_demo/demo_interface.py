@@ -441,4 +441,4 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
 
 if __name__ == '__main__':
   rospy.init_node('tycho_demo_test')
-  run_demo()
+  run_demo(cmd_freq=100)
