@@ -387,7 +387,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run_demo(callback_func=None, params=None, cmd_freq=DEF_CMD_FREQUENCY):
+def run_demo(callback_func=None, params=None, cmd_freq=0):
   params = params or {}
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
@@ -402,6 +402,7 @@ def run_demo(callback_func=None, params=None, cmd_freq=DEF_CMD_FREQUENCY):
   state.params = params
 
   # Set command frequency
+  assert cmd_freq > 0, "Command frequency must be specified! (pass cmd_freq to run_demo())"
   state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
   add_snapping_function(state)
