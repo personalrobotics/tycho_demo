@@ -1,6 +1,6 @@
 # Tycho Demo
 
-The base demo interface for our chopsticks robot, Tycho (Thank You CHOpsticks).
+The base demo interface for our chopsticks robot, Tycho (Teach Your CHOpsticks).
 
 ## Installation
 
@@ -13,3 +13,10 @@ $ ./launch/start_demo.sh
 $ python src/launch_demo.py
 ```
 
+On the command line, hit 'h' for help.
+
+You can try grabbing (closing the end effector) by pressing 'g'.
+
+You can try out the basic step function 's' or swing function 'x'.
+
+You can import the `run_demo` function for your downstream demo needs.

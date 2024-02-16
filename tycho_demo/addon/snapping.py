@@ -39,7 +39,7 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
 
 def _flat_move(key, state):
   import numpy as np
-  from tycho_env.utils import construct_choppose, construct_command
+  from tycho_env.utils import construct_command
   from scipy.spatial.transform import Rotation as scipyR
   print_and_cr('Move to a predefined sets of positions')
   moving_eepos = np.empty(8)

@@ -3,6 +3,7 @@
 # ------------------------------------------------------------------------------
 # Move the robot to a preset starting location
 # (using a RRT planner that checks for self-collision)
+# (Not recommended for use right now becuase the RRT plan is not smooth)
 # - Moving
 #   Move quickly (4 seconds)
 # - Slow Moving

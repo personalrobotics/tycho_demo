@@ -7,7 +7,6 @@ from tycho_demo.addon import add_recording_function, add_tuning_function,\
 
 def handler_installer(state):
   add_recording_function(state)
-
   add_visualize_function(state)
   add_replay_function(state)
   add_tuning_function(state)
