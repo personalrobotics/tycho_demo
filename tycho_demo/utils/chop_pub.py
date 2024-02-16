@@ -160,3 +160,7 @@ class ChopPublisher:
   def setChopsticksToGrey(self):
     grey = ColorRGBA(0.753, 0.753, 0.753, 1.0)
     self._set_chopsticks_color(grey)
+
+  def setChopsticksColorRGBA(self, r,g,b,a):
+    color = ColorRGBA(r,g,b,a)
+    self._set_chopsticks_color(color)
