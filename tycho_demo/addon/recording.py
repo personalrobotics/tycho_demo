@@ -14,12 +14,67 @@
 import os
 
 from tycho_env.utils import print_and_cr, colors
-from subprocess import Popen, STDOUT
 from time import strftime, localtime, sleep
+from threading import Lock, Thread
+from queue import Queue
+from functools import partial
+from typing import Dict
+
+import rospy
+import rosbag
+import rostopic
+
 
 # Singleton
-FNULL = open(os.devnull, 'w')
-ROSBAG_PROC = []
+RECORD_LOCK = Lock()
+MSG_QUEUE = Queue()
+BAG_WRITERS: Dict[str, rosbag.Bag] = {}
+ROSBAG_RECORDING = False
+RECORDED_TOPICS = set()
+WORKER_LAUNCHED = False
+
+def subscriber_callback(bagname, topic, msg):
+  if ROSBAG_RECORDING:
+    MSG_QUEUE.put((bagname, topic, msg))
+
+def recording_worker():
+  while True:
+    bagname, topic, msg = MSG_QUEUE.get()
+    try:
+      with RECORD_LOCK:
+        try:
+          writer: rosbag.Bag = BAG_WRITERS[bagname]
+          writer.write(topic, msg)
+        except KeyError:
+          print_and_cr(f"ERR: No bag name: {bagname}")
+    finally:
+      MSG_QUEUE.task_done()
+
+def launch_recording_subs(pose_topics, dict_topics):
+  global RECORDED_TOPICS, WORKER_LAUNCHED
+  unknown_topics = []
+  for topic in pose_topics:
+    if topic not in RECORDED_TOPICS:
+      TopicType, _, _ = rostopic.get_topic_class(topic)
+      if TopicType is not None:
+        callback = partial(subscriber_callback, "pose", topic)
+        rospy.Subscriber(topic, TopicType, callback, queue_size=10)
+        RECORDED_TOPICS.add(topic)
+      else:
+        unknown_topics.append(topic)
+  for bagname, topic in dict_topics.items():
+    if topic not in RECORDED_TOPICS:
+      TopicType, _, _ = rostopic.get_topic_class(topic)
+      if TopicType is not None:
+        callback = partial(subscriber_callback, bagname, topic)
+        rospy.Subscriber(topic, TopicType, callback, queue_size=10)
+        RECORDED_TOPICS.add(topic)
+      else:
+        unknown_topics.append(topic)
+  if not WORKER_LAUNCHED:
+    Thread(target=recording_worker, daemon=True).start()
+    WORKER_LAUNCHED = True
+  print_and_cr(f"Following topics will not be recorded: {', '.join(unknown_topics)}")
 
 def add_recording_function(state):
   state.handlers['r'] = _record
@@ -81,30 +136,33 @@ def _relabel_failure_recording(key, state):
 def start_rosbag_recording(record_prefix, pose_topics, dict_topics):
   print_and_cr(colors.bg.green + 'Recording to rosbag {}'.format(
     os.path.basename(record_prefix)))
-  args1 = ['rosbag', 'record'] + pose_topics + \
-          ['-O', record_prefix+'-pose.bag', '__name:=pose_bag']
-  ROSBAG_PROC.clear()
-  ROSBAG_PROC.append(Popen(args1, stdout=FNULL, stderr=STDOUT))
 
-  for topic in dict_topics.keys():
-    args2 = ['rosbag', 'record',
-             dict_topics[topic],
-             '-O', record_prefix+'-'+topic+'.bag',
-             '__name:='+topic+'_bag']
-    ROSBAG_PROC.append(Popen(args2, stdout=FNULL, stderr=STDOUT))
+  launch_recording_subs(pose_topics, dict_topics)
+
+  def create_writer(bagname):
+    return rosbag.Bag(f"{record_prefix}-{bagname}.bag", "w")
+
+  with RECORD_LOCK:
+    if len(BAG_WRITERS) != 0 or not MSG_QUEUE.empty():
+      print_and_cr("ERR: Recording already in progress!")
+      return
+
+    BAG_WRITERS["pose"] = create_writer("pose")
+    for bagname in dict_topics:
+      BAG_WRITERS[bagname] = create_writer(bagname)
+  global ROSBAG_RECORDING
+  ROSBAG_RECORDING = True
 
 def stop_rosbag_recording(dict_topics):
-  print_and_cr(colors.bg.lightgrey + f'Stop rosbag recording ({len(ROSBAG_PROC)} subprocs)' + colors.reset)
-  for p in ROSBAG_PROC:
-    p.terminate()
-  for p in ROSBAG_PROC:
-    p.kill()
-  ROSBAG_PROC.clear()
-  args1 = ['rosnode', 'kill', '/pose_bag']
-  rosbag_killer = Popen(args1, stdout=FNULL, stderr=STDOUT)
-  for topic in dict_topics.keys():
-    args2 = ['rosnode', 'kill', '/'+topic+'_bag']
-    rosbag_killer = Popen(args2, stdout=FNULL, stderr=STDOUT)
+  print_and_cr(colors.bg.lightgrey + f'Stop rosbag recording' + colors.reset)
+
+  global ROSBAG_RECORDING
+  ROSBAG_RECORDING = False
+  MSG_QUEUE.join()
+  with RECORD_LOCK:
+    for _, writer in BAG_WRITERS.items():
+      writer.close()
+    BAG_WRITERS.clear()
 
 def delete_recording(rosbag_recording_to, dict_topics):
   print_and_cr(colors.bg.red + 'Deleting rosbag recording' + colors.reset)
