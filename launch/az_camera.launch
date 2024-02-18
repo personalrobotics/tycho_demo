@@ -17,7 +17,6 @@
       <param name="interpolation" value="0" />
   </node>
 
-  <!--
   <node
         pkg="nodelet" type="nodelet" name="rectify_rgb"
         args="load image_proc/rectify manager --no-bond"
@@ -25,10 +24,9 @@
       <remap from="image_mono"  to="/$(arg topic_prefix)/rgb/image_raw" />
       <remap from="image_rect"  to="/$(arg topic_prefix)/rgb/image_rect_color" />
   </node>
-  -->
 
   <!-- Spawn an image_proc/rectify nodelet to rectify the IR image -->
-  <!--
+  <?ignore
   <node
         pkg="nodelet" type="nodelet" name="rectify_ir"
         args="load image_proc/rectify manager --no-bond"
@@ -36,6 +34,6 @@
       <remap from="image_mono"  to="/$(arg topic_prefix)/ir/image_raw" />
       <remap from="image_rect"  to="/$(arg topic_prefix)/ir/image_rect" />
   </node>
-  -->
+  ?>
 
 </launch>
