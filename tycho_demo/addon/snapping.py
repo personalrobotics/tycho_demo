@@ -89,7 +89,7 @@ def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
   positions[:,0] = cur_positions
   positions[:,1] = cur_positions
   force_open = positions[-1, 1] + 0.1
-  force_open = np.clip(force_open, OPEN_LIMIT, CLOSE_LIMIT)
+  force_open = np.clip(force_open, CLOSE_LIMIT, OPEN_LIMIT)
   positions[-1,1] = force_open
   positions[-1,0] = force_open
   # ? why does the generated trajectory makes the last joint move a lot?
