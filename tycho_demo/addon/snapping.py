@@ -13,6 +13,8 @@ import numpy as np
 from time import time
 from functools import partial
 
+FLAT_MOVING_POS = [-1.549781576050989, 1.7630800247683762, 2.156477754791279, 0.39334130278068974, 1.592408334181594, 0.001258663470587632, -0.437]
+
 SLOW_MOVING_KEY = "M"
 FAST_MOVING_KEY = "m"
 FLAT_MOVING_KEY = "j"
@@ -38,16 +40,8 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.unlock()
 
 def _flat_move(key, state):
-  import numpy as np
-  from tycho_env.utils import construct_command
-  from scipy.spatial.transform import Rotation as scipyR
-  print_and_cr('Move to a predefined sets of positions')
-  moving_eepos = np.empty(8)
-  moving_eepos[:3] = [-0.22083452, -0.38280237, 0.10270547]
-  moving_eepos[3:7] = scipyR.from_rotvec([0., 180, 0.], degrees=True).as_quat()
-  moving_eepos[7] = -0.437
-  jointpos = construct_command(state.arm, state.current_position, target_vector=moving_eepos)
-  do_snapping(state, [jointpos], 3.0)
+  print_and_cr('Move to a predefined position ' + np.array2string(np.array(FLAT_MOVING_POS), precision=3))
+  do_snapping(state, [FLAT_MOVING_POS], 3.0)
 
 def _move(key, state):
   print_and_cr('Move to a predefined position ' + np.array2string(np.array(MOVING_POSITION), precision=3))

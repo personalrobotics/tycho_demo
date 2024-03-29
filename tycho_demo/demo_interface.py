@@ -426,7 +426,10 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   while res != 'q' and not state.quit:
     print_and_cr('')
     if res in state.handlers_keys:
-      state.handlers[res](res, state)
+      try:
+        state.handlers[res](res, state)
+      except Exception as e:
+        print_and_cr(colors.bg.red + str(e) + colors.reset)
     sleep(0.01)
     res = getch()
 

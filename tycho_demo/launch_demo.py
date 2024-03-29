@@ -14,4 +14,4 @@ def handler_installer(state):
 
 if __name__ == '__main__':
   rospy.init_node("tycho_demo")
-  run_demo(callback_func=handler_installer, cmd_freq=100)
+  run_demo(callback_func=handler_installer, cmd_freq=20)

@@ -17,6 +17,7 @@ kill_tmux_if_running azcam_side
 kill_tmux_if_running mocap
 kill_tmux_if_running ball_pub
 kill_tmux_if_running tag_detector
+kill_tmux_if_running rigidbody_pub
 kill_tmux_if_running azcam_undistort_back
 kill_tmux_if_running azcam_undistort_front
 kill_tmux_if_running azcam_undistort_side

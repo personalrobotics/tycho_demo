@@ -21,7 +21,7 @@ CHOP_RANGE = (OPEN_LIMIT - CLOSE_LIMIT ) / 2
 TUNING_MODES = {'step', 'swing', 'swing_vel'}
 
 # singleton (not constant)
-STEP_SIZE = 0.2
+STEP_SIZE = 0.1
 
 def add_tuning_function(state):
   state.handlers['x'] = state.handlers['s'] = _fix
