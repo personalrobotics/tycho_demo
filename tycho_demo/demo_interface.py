@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import sys
+from typing import Callable
 sys.path.append("/usr/lib/python3/dist-packages")
 # Enable the conda python interpreter to access ROS packages
 # Even if ROS installs the packages to the system python
@@ -54,6 +55,15 @@ class State(object):
     self.rosbag_recording_to = None
     self.controller_save_file = None
     self.res_estimator = None
+
+    # modes and hooks
+    self.modes: dict[str, Callable[[State, float], tuple[np.ndarray, np.ndarray]]] = {}
+    self.handlers: dict[str, Callable[[str, State], None]] = {}
+    self.onclose: list[Callable[[State], None]] = []
+    # invoked with (state, prev_mode)
+    self.mode_change_hooks: list[Callable[[State, str], None]] = []
+    self.pre_command_hooks: dict[str, list[Callable[[State], None]]] = {}
+    self.post_command_hooks: dict[str, list[Callable[[State], None]]] = {}
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -206,7 +216,7 @@ def send_command_controller(state, timestamp=None):
       np.array(state.command_effort),
       np.array(pwm)))
 
-def command_proc(state):
+def command_proc(state: State):
   group = state.arm.group
   group.feedback_frequency = float(ROBOT_FEEDBACK_FREQUENCY) # Obtain update from the robot at this frequency
   state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
@@ -255,7 +265,11 @@ def command_proc(state):
 
     # Generating command
     assert current_mode in state.mode_keys
+    for fn in state.pre_command_hooks.get("*", []) + state.pre_command_hooks.get(current_mode, []):
+      fn(state)
     command_pos, command_vel = state.modes[current_mode](state, time())
+    for fn in state.post_command_hooks.get("*", []) + state.post_command_hooks.get(current_mode, []):
+      fn(state)
 
     state.lock()
 
@@ -393,12 +407,8 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   _load_hebi_controller_gains('L', state)
 
   # Basic demo functions
-  modes = {}
-  onclose = []
-  modes['idle'] = __idle
+  state.modes['idle'] = __idle
   state.handlers = init_default_handlers()
-  state.modes = modes
-  state.onclose = onclose
   state.params = params
 
   # Set command frequency
@@ -426,10 +436,14 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   while res != 'q' and not state.quit:
     print_and_cr('')
     if res in state.handlers_keys:
+      prev_mode = state.mode
       try:
         state.handlers[res](res, state)
       except Exception as e:
         print_and_cr(colors.bg.red + str(e) + colors.reset)
+      if state.mode != prev_mode:
+        for fn in state.mode_change_hooks:
+          fn(state, prev_mode)
     sleep(0.01)
     res = getch()
 
