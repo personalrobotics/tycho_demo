@@ -1,13 +1,14 @@
 from __future__ import print_function
 
 import sys
-from typing import Callable
+from typing import Callable, List, Dict
 sys.path.append("/usr/lib/python3/dist-packages")
 # Enable the conda python interpreter to access ROS packages
 # Even if ROS installs the packages to the system python
 
 from time import time, sleep
 from threading import Lock, Thread
+from collections import defaultdict
 import numpy as np
 
 # Ros
@@ -27,7 +28,7 @@ from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function
+from tycho_demo.addon import add_snapping_function, add_ros_record_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
@@ -57,13 +58,14 @@ class State(object):
     self.res_estimator = None
 
     # modes and hooks
-    self.modes: dict[str, Callable[[State, float], tuple[np.ndarray, np.ndarray]]] = {}
-    self.handlers: dict[str, Callable[[str, State], None]] = {}
-    self.onclose: list[Callable[[State], None]] = []
+    self.modes: Dict[str, Callable[[State, float], tuple[np.ndarray, np.ndarray]]] = {}
+    self.handlers: Dict[str, Callable[[str, State], None]] = {}
+    self.onclose: List[Callable[[State], None]] = []
     # invoked with (state, prev_mode)
-    self.mode_change_hooks: list[Callable[[State, str], None]] = []
-    self.pre_command_hooks: dict[str, list[Callable[[State], None]]] = {}
-    self.post_command_hooks: dict[str, list[Callable[[State], None]]] = {}
+    self.mode_change_hooks: List[Callable[[State, str], None]] = []
+    self.pre_command_hooks: Dict[str, List[Callable[[State], None]]] = defaultdict(list)
+    self.post_command_hooks: Dict[str, List[Callable[[State], None]]] = defaultdict(list)
+    self.info = {} # everything here must be pickleable
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -265,10 +267,10 @@ def command_proc(state: State):
 
     # Generating command
     assert current_mode in state.mode_keys
-    for fn in state.pre_command_hooks.get("*", []) + state.pre_command_hooks.get(current_mode, []):
+    for fn in state.pre_command_hooks["*"] + state.pre_command_hooks[current_mode]:
       fn(state)
     command_pos, command_vel = state.modes[current_mode](state, time())
-    for fn in state.post_command_hooks.get("*", []) + state.post_command_hooks.get(current_mode, []):
+    for fn in state.post_command_hooks["*"] + state.post_command_hooks[current_mode]:
       fn(state)
 
     state.lock()
@@ -401,7 +403,7 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run_demo(callback_func=None, params=None, cmd_freq=0):
+def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
   params = params or {}
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
@@ -416,6 +418,7 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
   add_snapping_function(state)
+  add_ros_record_function(state, recorded_topics)
 
   # Caller install custom handlers
   if callback_func is not None:
