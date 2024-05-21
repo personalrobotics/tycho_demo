@@ -22,13 +22,14 @@ from tycho_env import arm_container, Smoother, TychoController, IIRFilter
 from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
+  construct_choppose,
   euler_angles_from_rotation_matrix)
 # Import Constant
 from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function, add_ros_record_function
+from tycho_demo.addon import add_snapping_function, add_ros_record_function, add_logger_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
@@ -53,7 +54,6 @@ class State(object):
     self.arm = arm
     self.gains_file = gains_file
     self.publishers = []
-    self.rosbag_recording_to = None
     self.controller_save_file = None
     self.res_estimator = None
 
@@ -181,10 +181,6 @@ def send_command(state, timestamp):
   hebi_command.position = np.array(command_pos) - OFFSET_JOINTS
   hebi_command.velocity = np.array(command_vel)
   hebi_command.effort = state.arm._get_grav_comp_efforts(state.current_position).copy()
-  # print_and_cr(f"command_position = {hebi_command.position}")
-  # print_and_cr(f"command_velocity = {hebi_command.velocity }")
-  # print_and_cr(f"command_effort = {hebi_command.effort}")
-
 
   state.arm.group.send_command(hebi_command)
   if state.controller_save_file:
@@ -266,12 +262,17 @@ def command_proc(state: State):
       state.print_state = False
 
     # Generating command
+    t = time()
+    state.info["curr_time"] = t
+    state.info["curr_position"] = state.current_position
+    state.info["curr_choppose"] = construct_choppose(state.arm, state.current_position)
     assert current_mode in state.mode_keys
     for fn in state.pre_command_hooks["*"] + state.pre_command_hooks[current_mode]:
       fn(state)
-    command_pos, command_vel = state.modes[current_mode](state, time())
+    command_pos, command_vel = state.modes[current_mode](state, t)
     for fn in state.post_command_hooks["*"] + state.post_command_hooks[current_mode]:
       fn(state)
+    state.info["target_position"] = command_pos
 
     state.lock()
 
@@ -419,6 +420,7 @@ def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
 
   add_snapping_function(state)
   add_ros_record_function(state, recorded_topics)
+  add_logger_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:

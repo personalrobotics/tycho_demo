@@ -1,11 +1,10 @@
 from typing import List
-from demo_interface import State
 from threading import Lock
 
 from tycho_env.utils import GenericMessageSubscriber, print_and_cr, numpify
 
 
-def record_topic(state: State, topic: str):
+def record_topic(state, topic: str):
     def callback(msg):
         try:
             value = numpify(msg)
@@ -17,7 +16,7 @@ def record_topic(state: State, topic: str):
     state.topic_subs[topic] = sub
 
 
-def add_ros_record_function(state: State, recorded_topics: List[str]):
+def add_ros_record_function(state, recorded_topics: List[str]):
     state.topic_subs = {}
     state.rostopic_mutex = Lock()
     state.latest_ros_data = {}
@@ -29,6 +28,6 @@ def add_ros_record_function(state: State, recorded_topics: List[str]):
             record_topic(state, topic)
 
 
-def pre_cmd_hook(state: State):
+def pre_cmd_hook(state):
     with state.rostopic_mutex:
         state.info.update(state.latest_ros_data)
