@@ -274,6 +274,12 @@ def command_proc(state: State):
       fn(state)
     state.info["target_position"] = command_pos
 
+    with state._mutex:
+      new_mode = state.mode
+    if new_mode != current_mode:
+      for fn in state.mode_change_hooks:
+        fn(state, current_mode)
+
     state.lock()
 
     # Check for IK jump, apply smoother, and send out command
@@ -441,12 +447,15 @@ def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
   while res != 'q' and not state.quit:
     print_and_cr('')
     if res in state.handlers_keys:
-      prev_mode = state.mode
+      with state._mutex:
+        prev_mode = state.mode
       try:
         state.handlers[res](res, state)
       except Exception as e:
         print_and_cr(colors.bg.red + str(e) + colors.reset)
-      if state.mode != prev_mode:
+      with state._mutex:
+        new_mode = state.mode
+      if new_mode != prev_mode:
         for fn in state.mode_change_hooks:
           fn(state, prev_mode)
     sleep(0.01)
