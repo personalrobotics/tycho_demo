@@ -58,8 +58,11 @@ class State(object):
     self.res_estimator = None
 
     # modes and hooks
+    # Invoked on the control thread to get the current command (position and velocity setpoints for each joint)
     self.modes: Dict[str, Callable[[State, float], tuple[np.ndarray, np.ndarray]]] = {}
+    # Invoked on the control thread when handling input
     self.handlers: Dict[str, Callable[[str, State], None]] = {}
+    # Invoked when shutting down the program
     self.onclose: List[Callable[[State], None]] = []
     # The following hooks are called from the command thread before and after querying the mode callback
     self.pre_command_hooks: Dict[str, List[Callable[[State], None]]] = defaultdict(list)
