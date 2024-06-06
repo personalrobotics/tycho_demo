@@ -16,7 +16,7 @@ def record_topic(state, topic: str):
     state.topic_subs[topic] = sub
 
 
-def add_ros_record_function(state, recorded_topics: List[str]):
+def add_ros_subscribe_function(state, recorded_topics: List[str]):
     state.topic_subs = {}
     state.rostopic_mutex = Lock()
     state.latest_ros_data = {}

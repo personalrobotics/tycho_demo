@@ -1,6 +1,6 @@
 import argparse
 import pickle
-from typing import Any, Dict, List, Generator
+from typing import Any, Dict, List
 import numpy as np
 
 from tycho_demo.utils import read_raw_log

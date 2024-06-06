@@ -29,7 +29,7 @@ from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function, add_ros_record_function, add_logger_function
+from tycho_demo.addon import add_snapping_function, add_ros_subscribe_function, add_logger_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
@@ -263,8 +263,8 @@ def command_proc(state: State):
     # Generating command
     t = time()
     state.info["curr_time"] = t
-    state.info["curr_position"] = state.current_position
-    state.info["curr_choppose"] = construct_choppose(state.arm, state.current_position)
+    state.info["joint_pos"] = state.current_position
+    state.info["robot_pose"] = construct_choppose(state.arm, state.current_position)
     assert current_mode in state.mode_keys
     for fn in state.pre_command_hooks["*"] + state.pre_command_hooks[current_mode]:
       fn(state)
@@ -418,7 +418,7 @@ def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
   state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
   add_snapping_function(state)
-  add_ros_record_function(state, recorded_topics)
+  add_ros_subscribe_function(state, recorded_topics)
   add_logger_function(state)
 
   # Caller install custom handlers
