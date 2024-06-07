@@ -1,12 +1,14 @@
 from __future__ import print_function
 
 import sys
+from typing import Callable, List, Dict
 sys.path.append("/usr/lib/python3/dist-packages")
 # Enable the conda python interpreter to access ROS packages
 # Even if ROS installs the packages to the system python
 
 from time import time, sleep
 from threading import Lock, Thread
+from collections import defaultdict
 import numpy as np
 
 # Ros
@@ -20,13 +22,14 @@ from tycho_env import arm_container, Smoother, TychoController, IIRFilter
 from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
+  construct_choppose,
   euler_angles_from_rotation_matrix)
 # Import Constant
 from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function
+from tycho_demo.addon import add_snapping_function, add_ros_subscribe_function, add_logger_function
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
@@ -51,9 +54,20 @@ class State(object):
     self.arm = arm
     self.gains_file = gains_file
     self.publishers = []
-    self.rosbag_recording_to = None
     self.controller_save_file = None
     self.res_estimator = None
+
+    # modes and hooks
+    # Invoked on the control thread to get the current command (position and velocity setpoints for each joint)
+    self.modes: Dict[str, Callable[[State, float], tuple[np.ndarray, np.ndarray]]] = {}
+    # Invoked on the control thread when handling input
+    self.handlers: Dict[str, Callable[[str, State], None]] = {}
+    # Invoked when shutting down the program
+    self.onclose: List[Callable[[State], None]] = []
+    # The following hooks are called from the command thread before and after querying the mode callback
+    self.pre_command_hooks: Dict[str, List[Callable[[State], None]]] = defaultdict(list)
+    self.post_command_hooks: Dict[str, List[Callable[[State], None]]] = defaultdict(list)
+    self.info = {} # everything here must be pickleable
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -169,10 +183,6 @@ def send_command(state, timestamp):
   hebi_command.position = np.array(command_pos) - OFFSET_JOINTS
   hebi_command.velocity = np.array(command_vel)
   hebi_command.effort = state.arm._get_grav_comp_efforts(state.current_position).copy()
-  # print_and_cr(f"command_position = {hebi_command.position}")
-  # print_and_cr(f"command_velocity = {hebi_command.velocity }")
-  # print_and_cr(f"command_effort = {hebi_command.effort}")
-
 
   state.arm.group.send_command(hebi_command)
   if state.controller_save_file:
@@ -206,7 +216,7 @@ def send_command_controller(state, timestamp=None):
       np.array(state.command_effort),
       np.array(pwm)))
 
-def command_proc(state):
+def command_proc(state: State):
   group = state.arm.group
   group.feedback_frequency = float(ROBOT_FEEDBACK_FREQUENCY) # Obtain update from the robot at this frequency
   state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
@@ -254,8 +264,17 @@ def command_proc(state):
       state.print_state = False
 
     # Generating command
+    t = time()
+    state.info["curr_time"] = t
+    state.info["joint_pos"] = state.current_position
+    state.info["robot_pose"] = construct_choppose(state.arm, state.current_position)
     assert current_mode in state.mode_keys
-    command_pos, command_vel = state.modes[current_mode](state, time())
+    for fn in state.pre_command_hooks["*"] + state.pre_command_hooks[current_mode]:
+      fn(state)
+    command_pos, command_vel = state.modes[current_mode](state, t)
+    for fn in state.post_command_hooks["*"] + state.post_command_hooks[current_mode]:
+      fn(state)
+    state.info["target_position"] = command_pos
 
     state.lock()
 
@@ -387,25 +406,24 @@ def __idle(state, curr_time):
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
 
-def run_demo(callback_func=None, params=None, cmd_freq=0):
+def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
   params = params or {}
   state, _, _ = init_robotarm()
   _load_hebi_controller_gains('L', state)
 
   # Basic demo functions
-  modes = {}
-  onclose = []
-  modes['idle'] = __idle
+  state.modes['idle'] = __idle
   state.handlers = init_default_handlers()
-  state.modes = modes
-  state.onclose = onclose
   state.params = params
 
   # Set command frequency
   assert cmd_freq > 0, "Command frequency must be specified! (pass cmd_freq to run_demo())"
   state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
+  # Install default handlers BEFORE custom handlers
+  add_ros_subscribe_function(state, recorded_topics) # should be installed first
   add_snapping_function(state)
+  add_logger_function(state)
 
   # Caller install custom handlers
   if callback_func is not None:
