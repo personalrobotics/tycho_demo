@@ -420,8 +420,9 @@ def run_demo(callback_func=None, params=None, recorded_topics=[], cmd_freq=0):
   assert cmd_freq > 0, "Command frequency must be specified! (pass cmd_freq to run_demo())"
   state.counter_skip_freq = round(ROBOT_FEEDBACK_FREQUENCY / cmd_freq)
 
+  # Install default handlers BEFORE custom handlers
+  add_ros_subscribe_function(state, recorded_topics) # should be installed first
   add_snapping_function(state)
-  add_ros_subscribe_function(state, recorded_topics)
   add_logger_function(state)
 
   # Caller install custom handlers
