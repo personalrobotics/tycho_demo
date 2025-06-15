@@ -72,7 +72,7 @@ def _press_logging(key_pressed, state):
 
 def start_logging(q):
     while True:
-        obs,act,img = [],[],[]
+        obs,act,img,tactile = [],[],[],[]
         folder_name = q.get(block=True)
         if folder_name is None:
             break
@@ -90,7 +90,7 @@ def start_logging(q):
         while True:
             new_items = q.get(block=True)
             if new_items is None:
-                pickle.dump({'obs':obs,'act':act,'img':img},pickle_file)
+                pickle.dump({'obs':obs,'act':act,'img':img,'tactile':tactile},pickle_file)
                 file_handler.close()
                 pickle_file.close()
                 print_and_cr(f"{colors.reset}[LOGGING] Close log.csv in {folder_name}")
@@ -123,8 +123,23 @@ def start_logging(q):
                 act.append(np.array(new_items[-2]).reshape(-1))
                 img.append(np.array(new_items[-1]))
 
+            elif len(new_items) == 6:
+                for item in range(len(new_items)-2):
+                    #if isinstance(item, np.ndarray):
+                    item_flat = np.array(item).reshape(-1)
+                    file_handler.write(np.array2string(item_flat,
+                        precision=8, separator=' ', max_line_width=9999)[1:-1])
+                    #else:
+                    #    file_handler.write(str(item))
+                    file_handler.write(',')
+                file_handler.write('\n')
+                idx += 1
 
-
+                # ((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
+                obs.append(np.array(new_items[0]).reshape(-1))
+                act.append(np.array(new_items[-2]).reshape(-1))
+                img.append(np.array(new_items[-2]))
+                tactile.append(np.array(new_items[-1]))
 def clear_log_queue_on_quit(state):
     state.log_queue.put(None)
     state.log_queue.close()

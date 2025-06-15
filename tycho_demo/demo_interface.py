@@ -287,6 +287,8 @@ def command_proc(state):
       state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
       if state.state_cam is not None:
         state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
+        if state.tactile is not None:
+          state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam,state.tactile))
       else:
         state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
       # state.log_queue.put((ee_pose, state.tracked_objs["ball1"], state.tracked_objs["ball2"],state.tracked_objs["ball3"],state.tracked_objs["ball4"], rigidbody, choppose_target))
