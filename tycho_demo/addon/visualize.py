@@ -120,7 +120,8 @@ def save_fdbk_to_file(fn, q, last_tuned_joint=None):
 
 def viz_errors(fn="controller.csv", last_tuned_joint=None):
   def str2nparray(_string):
-    return np.fromstring(_string, dtype=np.float, sep=' ')
+    return np.fromstring(_string, dtype=np.float64, sep=' ')
+  print(f"FN: {fn}")
   pullData = open(fn,"r").read()
   dataArray = pullData.split('\n')
   xar = []
@@ -157,17 +158,17 @@ def viz_errors(fn="controller.csv", last_tuned_joint=None):
     max_err = errors[_j, max_idx]
     x_at_max_err = xar[max_idx]
     print_and_cr('Joint {} max error: {} at x={}\tavg err: {}\n'.format(_j, max_err, x_at_max_err, avg_err))
-    plt.figure()
-    plt.axvline(x=x_at_max_err, color='g')  #vertical line at max diff
-    plt.plot(xar,yar[_j], color='red', label='pos', marker='o')
-    plt.plot(xar,y2ar[_j], color='blue', label='cmd', marker='o')
-    plt.title('Joint {}'.format(_j))
-    plt.legend()
+  #   plt.figure()
+  #   plt.axvline(x=x_at_max_err, color='g')  #vertical line at max diff
+  #   plt.plot(xar,yar[_j], color='red', label='pos', marker='o')
+  #   plt.plot(xar,y2ar[_j], color='blue', label='cmd', marker='o')
+  #   plt.title('Joint {}'.format(_j))
+  #   plt.legend()
 
-    plt.figure()
-    plt.plot(xar, vels[_j], color='red', label='vel', marker='o')
-    plt.plot(xar, command_vels[_j], color='blue', label='cmd', marker='o')
-    plt.title('Joint {} vel'.format(_j))
-    plt.legend()
+  #   plt.figure()
+  #   plt.plot(xar, vels[_j], color='red', label='vel', marker='o')
+  #   plt.plot(xar, command_vels[_j], color='blue', label='cmd', marker='o')
+  #   plt.title('Joint {} vel'.format(_j))
+  #   plt.legend()
 
-  plt.show()
+  # plt.imsave("test.png")

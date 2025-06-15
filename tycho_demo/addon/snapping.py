@@ -41,11 +41,15 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
 
 def _flat_move(key, state):
   print_and_cr('Move to a predefined position ' + np.array2string(np.array(FLAT_MOVING_POS), precision=3))
-  do_snapping(state, [FLAT_MOVING_POS], 3.0)
+  do_snapping(state, [FLAT_MOVING_POS], 1.0)
 
 def _move(key, state):
-  print_and_cr('Move to a predefined position ' + np.array2string(np.array(MOVING_POSITION), precision=3))
-  do_snapping(state, [MOVING_POSITION], 7.0 if key == SLOW_MOVING_KEY else 3.0)
+  if hasattr(state, "fix_position") and state.fix_position[-1] < -0.49:
+    print_and_cr('Move to a predefined position ' + np.array2string(np.hstack((MOVING_POSITION[:6], [state.fix_position[-1]])), precision=3))
+    do_snapping(state, [np.hstack((MOVING_POSITION[:6], [state.fix_position[-1]]))], 1.0 if key == SLOW_MOVING_KEY else 3.0)
+  else:
+    print_and_cr('Move to a predefined position ' + np.array2string(np.array(MOVING_POSITION), precision=3))
+    do_snapping(state, [MOVING_POSITION], 1.0 if key == SLOW_MOVING_KEY else 3.0)
 
 def __move(state, cur_time):
   if state.trajectory is None:
@@ -82,10 +86,10 @@ def create_moving_trajectory(cur_positions, _positions, per_step_time=3.0):
   time_vector[-1] = 0.2 + time_span + 0.05
   positions[:,0] = cur_positions
   positions[:,1] = cur_positions
-  force_open = positions[-1, 1] + 0.15 if positions[-1,1] < -0.3 else positions[-1, 1] + 0.02
-  force_open = np.clip(force_open, CLOSE_LIMIT, OPEN_LIMIT)
-  positions[-1,1] = force_open
-  positions[-1,0] = force_open
+  # force_open = positions[-1, 1] + 0.15 if positions[-1,1] < -0.3 else positions[-1, 1] + 0.02
+  # force_open = np.clip(force_open, CLOSE_LIMIT, OPEN_LIMIT)
+  # positions[-1,1] = force_open
+  # positions[-1,0] = force_open
   # ? why does the generated trajectory makes the last joint move a lot?
   for i in range(len(_positions)):
     positions[:,i+2] = _positions[i]

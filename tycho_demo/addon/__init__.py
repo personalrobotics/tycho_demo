@@ -6,3 +6,6 @@ from .replay_pose import add_replay_pose_function
 from .tuning import add_tuning_function
 from .visualize import add_visualize_function
 from .grabbing import add_grabbing_function
+from .logger import add_logging_function
+from .tactile import TouchSensor
+from .t265 import T265_streaming

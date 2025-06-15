@@ -63,6 +63,7 @@ def _fix(key, state):
     print_and_cr(f"Unrecognized key: {key}")
     return
   state.tuning_joint = None
+  print(state.fix_position)
   state.unlock()
 
 def _select_tuning_joint(key, state):

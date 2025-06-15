@@ -42,6 +42,13 @@ class _GetchUnix:
     old_settings = self._get_terminal_settings()
     try:
       self._set_terminal_raw()
+      # import select
+      # rlist, _, _ = select.select([sys.stdin], [], [], 0.01)
+      # if rlist:
+      #   ch = sys.stdin.read(1)
+      #   print('\r\n')
+      # else:
+      #   ch = None
       ch = sys.stdin.read(1)
     finally:
       self._restore_terminal_settings(old_settings)

@@ -138,3 +138,7 @@ dmypy.json
 
 recording
 controller*
+
+tycho_demo/logs/
+*.out
+*.err

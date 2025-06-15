@@ -8,10 +8,13 @@ sys.path.append("/usr/lib/python3/dist-packages")
 from time import time, sleep
 from threading import Lock, Thread
 import numpy as np
+from scipy.spatial.transform import Rotation as scipyR
+import cv2
 
 # Ros
 import rospy
-from sensor_msgs.msg import JointState
+from sensor_msgs.msg import JointState, CompressedImage
+from geometry_msgs.msg import PointStamped, PoseStamped
 
 # HEBI
 import hebi
@@ -20,13 +23,15 @@ from tycho_env import arm_container, Smoother, TychoController, IIRFilter
 from tycho_env.utils import (
   get_gains_path, load_gain,
   print_and_cr, colors,
+  R_optitrack2base,
+  imgMsgToImg,
   euler_angles_from_rotation_matrix)
 # Import Constant
 from tycho_env.utils import OFFSET_JOINTS, SMOOTHER_WINDOW_SIZE
 
 # Local
 from tycho_demo.keyboard import getch
-from tycho_demo.addon import add_snapping_function
+from tycho_demo.addon import add_snapping_function, TouchSensor, T265_streaming
 
 # Feedback frequency (Hz)
 ROBOT_FEEDBACK_FREQUENCY = 100      # How often to pull sensor info
@@ -52,8 +57,20 @@ class State(object):
     self.gains_file = gains_file
     self.publishers = []
     self.rosbag_recording_to = None
+    self.is_logging_to = None
+    self.last_logging_to = None
     self.controller_save_file = None
     self.res_estimator = None
+    self.tracked_objs = {
+      "ball": np.zeros(3),
+      "rigidbody_pose": np.zeros(7),
+      "choppose_target": np.zeros(8),
+      "ball1": np.zeros(3),
+      "ball2": np.zeros(3),
+      "ball3": np.zeros(3),
+      "ball4": np.zeros(3),
+    }
+    self.state_cam = None
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -128,6 +145,7 @@ def init_robotarm():
   hardwarePID_xml_file = get_gains_path("-hardwarePID")
 
   try:
+
     arm = arm_container.create_robot(dof=7)
     load_gain(arm.group, hardwarePID_xml_file)
   except:
@@ -147,6 +165,8 @@ def init_robotarm():
 def is_ik_jumping(state, command_pos):
   a = np.array(state.current_position)
   b = np.array(command_pos)
+  # print("a:", a)
+  # print("b:", b)
   threshold = np.array([0.3,0.3,0.5,0.8,0.5,0.5,10])
   if np.greater(np.abs(a-b), threshold).any():
     print_and_cr("IK Jumps \t" +
@@ -211,6 +231,7 @@ def command_proc(state):
   group.feedback_frequency = float(ROBOT_FEEDBACK_FREQUENCY) # Obtain update from the robot at this frequency
   state.command_smoother = Smoother(7, SMOOTHER_WINDOW_SIZE) # currently unused
   state.joint_smoother = IIRFilter(np.array([1., 0.75, 0.4, 0.2, 1., 0.2, 1.]))
+  # state.joint_smoother = IIRFilter(np.array([1., 1., 1., 1., 1., 1., 1.]))
 
   num_modules = group.size
   feedback = hebi.GroupFeedback(num_modules)
@@ -218,7 +239,6 @@ def command_proc(state):
   joint_state_msg = init_joint_state_msg(num_modules)
   joint_command_msg = init_joint_state_msg(num_modules)
   counter = 0
-
   while not state.quit:
     if group.get_next_feedback(reuse_fbk=feedback) is None:
       print_and_cr('Did not receive feedback')
@@ -255,21 +275,36 @@ def command_proc(state):
 
     # Generating command
     assert current_mode in state.mode_keys
+    # print(current_mode)
     command_pos, command_vel = state.modes[current_mode](state, time())
+    # print(command_pos)
+    if state.is_logging_to:
+      quat = scipyR.from_matrix(state.ee_pose[:3,:3]).as_quat()
+      xyz = np.array(state.ee_pose[:3,-1]).flatten()
+      ee_pose = np.hstack([xyz, quat, state.current_position[-1:]])
+      choppose_target = state.tracked_objs["choppose_target"]
+      rigidbody = state.tracked_objs["rigidbody_pose"]
+      state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
+      if state.state_cam is not None:
+        state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
+      else:
+        state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
+      # state.log_queue.put((ee_pose, state.tracked_objs["ball1"], state.tracked_objs["ball2"],state.tracked_objs["ball3"],state.tracked_objs["ball4"], rigidbody, choppose_target))
 
     state.lock()
 
     # Check for IK jump, apply smoother, and send out command
     if not state._mute:
       if all(pos is not None for pos in command_pos):
-        if is_ik_jumping(state, command_pos):
-          command_pos = state.joint_smoother.get()
-        else:
+        if not is_ik_jumping(state, command_pos):
           state.joint_smoother.append(command_pos)
-          command_pos = state.joint_smoother.get()
-      update_command(state, command_pos, command_vel)
-      if state.use_factory_controller:
-        send_command(state, feedback.hardware_receive_time)
+        command_pos = state.joint_smoother.get()
+
+      # If we IK jump after a smoother reset, joint_smoother gives None
+      if command_pos is not None:
+        update_command(state, command_pos, command_vel)
+        if state.use_factory_controller:
+          send_command(state, feedback.hardware_receive_time)
 
     # Publish Joint State
     if not rospy.is_shutdown():
@@ -299,6 +334,27 @@ def command_proc(state):
 
     state.unlock()
 
+def tactile_read_loop(state):
+  last = time()
+  while True:
+      lastData = state.tactile_sensor._read()
+      # print(1/(time() - last))
+      last = time()
+      if lastData is None:
+          continue
+      else:
+          state.tactile = lastData
+
+def t265_read_loop(state):
+  last = time()
+  while True:
+      lastData = state.t265._read()
+      # print(1/(time() - last))
+      last = time()
+      if lastData is None:
+          continue
+      else:
+          state.t265_4x4 = lastData
 ###########################################################
 # Key Press Handler
 ###########################################################
@@ -329,6 +385,7 @@ def _load_hebi_controller_gains(key, state):
                  'Switch to use the hardware PID controller and loading gains' +
                  colors.reset)
   controller_gains_xml_file = get_gains_path('-hardwarePID')
+  controller_gains_xml_file = get_gains_path('-all3')
   try:
     load_gain(state.arm.group, controller_gains_xml_file)
     state.use_factory_controller = True
@@ -342,6 +399,7 @@ def _load_hebi_controller_gains(key, state):
 def _idle(key, state):
   state.lock()
   state.mode = 'idle'
+  state.joint_smoother.reset()
   state.unlock()
 
 def _mute(key, state):
@@ -367,8 +425,8 @@ def _print_help(key, state):
 
 def init_default_handlers():
   handlers = {}
-  handlers['L'] = _load_hebi_controller_gains
-  handlers['l'] = _load_gain
+  #handlers['L'] = _load_hebi_controller_gains
+  #handlers['l'] = _load_gain
   handlers['z'] = _idle
   handlers['Z'] = _mute
   handlers['v'] = _print_state
@@ -386,10 +444,11 @@ def __idle(state, curr_time):
 #######################################################################
 # Main thread switches running mode by accepting keyboard command
 #######################################################################
-
 def run_demo(callback_func=None, params=None, cmd_freq=0):
   params = params or {}
+
   state, _, _ = init_robotarm()
+
   _load_hebi_controller_gains('L', state)
 
   # Basic demo functions
@@ -400,6 +459,83 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   state.modes = modes
   state.onclose = onclose
   state.params = params
+  def ball_cb(msg):
+    _p = msg.point
+    raw_point = np.array([_p.x, _p.y, _p.z, 1])
+    with state._mutex:
+      state.tracked_objs['ball'] = np.array(R_optitrack2base.dot(raw_point)[0:3]).reshape(-1)
+  rospy.Subscriber("/Ball/point", PointStamped, ball_cb)
+  def ball1_callback(pointstamped_msg):
+    _p = pointstamped_msg.point
+    raw_point = np.array([_p.x, _p.y, _p.z, 1])
+    with state._mutex:
+      state.tracked_objs['ball1'] = R_optitrack2base.dot(raw_point)[0:3].flatten()
+  rospy.Subscriber("/Ball/point1", PointStamped, ball1_callback)
+  def ball2_callback(pointstamped_msg):
+    _p = pointstamped_msg.point
+    raw_point = np.array([_p.x, _p.y, _p.z, 1])
+    with state._mutex:
+      state.tracked_objs['ball2'] = R_optitrack2base.dot(raw_point)[0:3].flatten()
+  rospy.Subscriber("/Ball/point2", PointStamped, ball2_callback)
+  def ball3_callback(pointstamped_msg):
+    _p = pointstamped_msg.point
+    raw_point = np.array([_p.x, _p.y, _p.z, 1])
+    with state._mutex:
+      state.tracked_objs['ball3'] = R_optitrack2base.dot(raw_point)[0:3].flatten()
+  rospy.Subscriber("/Ball/point3", PointStamped, ball3_callback)
+  def ball4_callback(pointstamped_msg):
+    _p = pointstamped_msg.point
+    raw_point = np.array([_p.x, _p.y, _p.z, 1])
+    with state._mutex:
+      state.tracked_objs['ball4'] = R_optitrack2base.dot(raw_point)[0:3].flatten()
+  rospy.Subscriber("/Ball/point4", PointStamped, ball4_callback)
+  def rigidbody_cb(pose_msg):
+    p = pose_msg.pose.position
+    q = pose_msg.pose.orientation
+    pose = np.array([q.x, q.y, q.z, q.w, p.x, p.y, p.z])
+    # print(rigidbody)
+    with state._mutex:
+      state.tracked_objs['rigidbody_pose'] = pose
+  rospy.Subscriber("/rigidbodies/1/pose", PoseStamped, rigidbody_cb)
+  # global cnt,cur_time
+  # cnt = 0
+  # cur_time = time()
+  def azcam_cb(msg):
+    global cnt,cur_time
+    img = imgMsgToImg(msg)[200:700,800:-620]
+    # print(img.shape)
+    # img = imgMsgToImg(msg)[140:430,200:620,:]
+    # img = imgMsgToImg(msg)[140:630,300:920,:]
+    # img = imgMsgToImg(msg)[0:-250,200:-500,:]
+    # cv2.imshow("shubham", img[:, :, ::-1])
+    # cv2.waitKey(1)
+    # img = imgMsgToImg(msg)[140:430,200:620,:]
+    # print(img.shape)
+    # height, width = img.shape[:2]
+    # new_width = 640
+    # aspect_ratio = width / height
+    # new_height = int(new_width / aspect_ratio)
+    # img = cv2.resize(img, (new_width, new_height))
+    # print(img.shape)
+    # cv2.imwrite("/home/prl/tmp/"+f"{time()}.png", img[:,:,::-1])
+    # print("here:",time()-cur_time)
+    # cnt += 1
+    # cur_time = time()
+    with state._mutex:
+      state.state_cam= img
+  rospy.Subscriber('/azcam_front/rgb/image_raw/compressed', CompressedImage, azcam_cb)
+  # streming tactile reading
+  if state.params['record_tactile']:
+    state.tactile_sensor = TouchSensor()
+    sleep(1)
+    tactile_read_thread = Thread(target=tactile_read_loop, args=(state,))
+    tactile_read_thread.start()
+  if state.params['use_t265']:
+    state.t265 = T265_streaming()
+    t265_read_thread = Thread(target=t265_read_loop, args=(state,))
+    t265_read_thread.start()
+
+
 
   # Set command frequency
   assert cmd_freq > 0, "Command frequency must be specified! (pass cmd_freq to run_demo())"
@@ -432,6 +568,12 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
         print_and_cr(colors.bg.red + str(e) + colors.reset)
     sleep(0.01)
     res = getch()
+    # if hasattr(state.imitation_agent, 'plot') and hasattr(state.imitation_agent.plot.fig, 'canvas'):
+    #   try:
+    #     state.imitation_agent.plot.fig.canvas.draw()
+    #     state.imitation_agent.plot.fig.canvas.flush_events()
+    #   except:
+    #     pass
 
   print_and_cr('Quitting...')
   state.lock()
@@ -444,4 +586,4 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
 
 if __name__ == '__main__':
   rospy.init_node('tycho_demo_test')
-  run_demo(cmd_freq=100)
+  run_demo(cmd_freq=20)

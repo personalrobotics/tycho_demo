@@ -13,7 +13,12 @@ def _grab(key, state):
     state.lock()
     state.mode = "grab"
     state.fix_position = np.array(state.current_position)
-    state.fix_position[-1] = -0.57 if key == GRAB_KEY else CHOPSTICK_PARALLEL
+    # For LEGO
+    # state.fix_position[-1] = -0.57 if key == GRAB_KEY else CHOPSTICK_PARALLEL
+    state.fix_position[-1] = -0.75 if key == GRAB_KEY else -0.54
+    # state.fix_position[-1] = -3.3 if key == GRAB_KEY else -0.7
+    # state.fix_position[-1] -= 0.5 if key == GRAB_KEY else -0.7
+
     state.unlock()
 
 def __grab(state, cur_time):

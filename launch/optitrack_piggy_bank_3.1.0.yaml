@@ -1,0 +1,52 @@
+# You can create copy of this file and load the required file on the rosparam server accordingly. Do not forget to modify the file name in the launch file.
+
+#Need to enable one of the tracking algorithm
+nearest_nbr: true
+kalman: false
+
+#-------------#
+#Parameters for nearest neighbour filter, Best to use norm instead of individual error until you know what you what you are doing.
+individual_error: false
+# Tracking tolerance considered individually in x,y,z when 'Individual_error' is set to true
+# Ideally tolerance shoould be greater than the (max robot speed in m/s)/(frame rate of motion capture system in Hz) 
+# Current tolerance is set according to the 1m/s and 30FPS. But this should work in majority of the cases. Do not change until its necessary 
+# in meters
+E_x: 0.04
+E_y: 0.04
+E_z: 0.04
+# Tracking tolerance considered as norm of 3D vector when 'Individual_error' is set to false
+E: 0.1
+
+rigidbody_points_per_body:
+  - 4
+  - 3
+rigidbody_point_names:
+  - R0
+  - R1
+  - R2
+  - R3
+  - T0
+  - T1
+  - T2
+object_names:
+  - Ball
+  - T3
+  - T4
+Ball:
+    pose:
+      position:
+      - 0.48
+      - -0.446
+      - 0.051
+T3:
+  pose:
+    position:
+    - 0.276
+    - -0.536
+    - -0.012
+T4:
+  pose:
+    position:
+    - 0.474
+    - -0.532
+    - -0.011

@@ -9,14 +9,14 @@
 launcher "tycho_transform" "rosrun tf static_transform_publisher -0.93919181, 0.16715677, -0.00317523 -0.00162249, 0.00215902, -0.00000002, 0.99999635 world optitrack 10"
 # (Last Updated 2022 May 30)
 
-echo "\033[94mPlace Optitrack Points to be at initialization position!\n... then, press enter to continue\033[0m"
+echo "\033[94mPlace Optitrack Points to be at initialization position for the piggy bank!\n... then, press enter to continue\033[0m"
 read -n 1 k <&1
 if [[ "${use_new_optitrack}" == "true" ]]; then
     echo "Using OptiTrack 3.1.0"
-    launcher "mocap" "roslaunch natnet_ros_cpp natnet_ros.launch conf_file:=$(rospack find tycho_demo_ros)/launch/optitrack_3.1.0.yaml"
+    launcher "mocap" "roslaunch natnet_ros_cpp natnet_ros.launch conf_file:=$(rospack find tycho_demo_ros)/launch/optitrack_piggy_bank_3.1.0.yaml"
 else 
     echo "Using OptiTrack 1.1.0"
-    launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/optitrack.yaml"
+    launcher "mocap" "roslaunch \"mocap_optitrack\" \"mocap.launch\" mocap_config_file:=$(rospack find tycho_demo_ros)/launch/optitrack_piggy_bank.yaml"
 fi
-launcher "rigidbody_pub" "$(rospack find tycho_demo_ros)/../tycho_perception/src/rigidbody_pose_publisher.py $(rospack find tycho_demo_ros)/launch/optitrack.yaml -f base --publish_tf"
+launcher "rigidbody_pub" "$(rospack find tycho_demo_ros)/../tycho_perception/src/rigidbody_pose_publisher.py $(rospack find tycho_demo_ros)/launch/optitrack_piggy_bank.yaml -f base --publish_tf"
 # launcher "coin_pub" "$(rospack find tycho_demo_ros)/../tycho_perception/src/coin_pose_publisher.py /rigidbodies/1/pose"

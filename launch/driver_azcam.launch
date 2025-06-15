@@ -37,7 +37,7 @@ Licensed under the MIT License.
       <arg name="wired_sync_mode" default="1"/>                       <!-- Wired sync mode. 0: OFF, 1: MASTER, 2: SUBORDINATE. -->
       <arg name="subordinate_delay_off_master_usec" default="0"/>     <!-- Delay subordinate camera off master camera by specified amount in usec. --> 
 
-      <node pkg="azure_kinect_ros_driver" type="node" name="azure_kinect_ros_driver_back" output="screen" required="$(arg required)">
+      <node pkg="azure_kinect_ros_driver" type="node" name="azure_kinect_ros_driver" output="screen" required="$(arg required)">
         <param name="depth_enabled"     type="bool"   value="$(arg depth_enabled)" />
         <param name="depth_mode"        type="string" value="$(arg depth_mode)" />
         <param name="color_enabled"     type="bool"   value="$(arg color_enabled)" />
