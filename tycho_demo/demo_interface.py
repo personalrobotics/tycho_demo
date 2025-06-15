@@ -71,6 +71,7 @@ class State(object):
       "ball4": np.zeros(3),
     }
     self.state_cam = None
+    self.tactile = None
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
