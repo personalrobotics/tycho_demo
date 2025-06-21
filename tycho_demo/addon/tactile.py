@@ -52,4 +52,5 @@ class TouchSensor():
             return None
 
         # print(pressure[9:14,15:18])
-        return {'pressure': pressure}
+        return pressure.copy()
+        # return {'pressure': pressure}

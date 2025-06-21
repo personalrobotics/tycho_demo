@@ -137,7 +137,7 @@ def start_logging(q):
 
                 # ((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
                 obs.append(np.array(new_items[0]).reshape(-1))
-                act.append(np.array(new_items[-2]).reshape(-1))
+                act.append(np.array(new_items[-3]).reshape(-1))
                 img.append(np.array(new_items[-2]))
                 tactile.append(np.array(new_items[-1]))
 def clear_log_queue_on_quit(state):

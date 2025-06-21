@@ -287,9 +287,11 @@ def command_proc(state):
       rigidbody = state.tracked_objs["rigidbody_pose"]
       state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
       if state.state_cam is not None:
-        state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
         if state.tactile is not None:
           state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam,state.tactile))
+        else:
+          state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
+
       else:
         state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
       # state.log_queue.put((ee_pose, state.tracked_objs["ball1"], state.tracked_objs["ball2"],state.tracked_objs["ball3"],state.tracked_objs["ball4"], rigidbody, choppose_target))
@@ -505,7 +507,7 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   # cur_time = time()
   def azcam_cb(msg):
     global cnt,cur_time
-    img = imgMsgToImg(msg)[200:700,800:-620]
+    img = imgMsgToImg(msg)[140:430,200:620,:]
     # print(img.shape)
     # img = imgMsgToImg(msg)[140:430,200:620,:]
     # img = imgMsgToImg(msg)[140:630,300:920,:]
