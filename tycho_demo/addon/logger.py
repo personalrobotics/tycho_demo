@@ -72,7 +72,7 @@ def _press_logging(key_pressed, state):
 
 def start_logging(q):
     while True:
-        obs,act,img,tactile = [],[],[],[]
+        obs,act,img,tactile,t265_left,t265_right = [],[],[],[],[],[]
         folder_name = q.get(block=True)
         if folder_name is None:
             break
@@ -90,7 +90,7 @@ def start_logging(q):
         while True:
             new_items = q.get(block=True)
             if new_items is None:
-                pickle.dump({'obs':obs,'act':act,'img':img,'tactile':tactile},pickle_file)
+                pickle.dump({'obs':obs,'act':act,'img':img,'tactile':tactile,'t265_left':t265_left, 't265_right':t265_right},pickle_file)
                 file_handler.close()
                 pickle_file.close()
                 print_and_cr(f"{colors.reset}[LOGGING] Close log.csv in {folder_name}")
@@ -140,6 +140,27 @@ def start_logging(q):
                 act.append(np.array(new_items[-3]).reshape(-1))
                 img.append(np.array(new_items[-2]))
                 tactile.append(np.array(new_items[-1]))
+
+            elif len(new_items) == 8:
+                for item in range(len(new_items)-4):
+                    #if isinstance(item, np.ndarray):
+                    item_flat = np.array(item).reshape(-1)
+                    file_handler.write(np.array2string(item_flat,
+                        precision=8, separator=' ', max_line_width=9999)[1:-1])
+                    #else:
+                    #    file_handler.write(str(item))
+                    file_handler.write(',')
+                file_handler.write('\n')
+                idx += 1
+
+                # ((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
+                # state.state_cam,state.tactile, state.t265_left, state.t265_right
+                obs.append(np.array(new_items[0]).reshape(-1))
+                act.append(np.array(new_items[-5]).reshape(-1))
+                img.append(np.array(new_items[-4]))
+                tactile.append(np.array(new_items[-3]))
+                t265_left.append(np.array(new_items[-2]))
+                t265_right.append(np.array(new_items[-1]))
 def clear_log_queue_on_quit(state):
     state.log_queue.put(None)
     state.log_queue.close()

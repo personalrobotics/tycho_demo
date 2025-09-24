@@ -14,7 +14,7 @@ from time import time
 from functools import partial
 
 FLAT_MOVING_POS = [-1.549781576050989, 1.7630800247683762, 2.156477754791279, 0.39334130278068974, 1.592408334181594, 0.001258663470587632, -0.437]
-
+FLAT_MOVING_POS = [-1.23266072 ,1.98596693 , 1.79778912, -0.06445049 , 1.96411746 ,-0.03455043 ,-2.1359086]
 SLOW_MOVING_KEY = "M"
 FAST_MOVING_KEY = "m"
 FLAT_MOVING_KEY = "j"
@@ -37,14 +37,15 @@ def do_snapping(state, moving_positions, total_time, return_mode=None):
   state.command_smoother.reset()
   state.return_mode = return_mode
   state.per_step_time = total_time / len(moving_positions)
+  state.reset = True
   state.unlock()
 
 def _flat_move(key, state):
   print_and_cr('Move to a predefined position ' + np.array2string(np.array(FLAT_MOVING_POS), precision=3))
-  do_snapping(state, [FLAT_MOVING_POS], 1.0)
+  do_snapping(state, [FLAT_MOVING_POS], 3.0)
 
 def _move(key, state):
-  if hasattr(state, "fix_position") and state.fix_position[-1] < -0.49:
+  if hasattr(state, "fix_position") and state.fix_position[-1] < -2.19:
     print_and_cr('Move to a predefined position ' + np.array2string(np.hstack((MOVING_POSITION[:6], [state.fix_position[-1]])), precision=3))
     do_snapping(state, [np.hstack((MOVING_POSITION[:6], [state.fix_position[-1]]))], 1.0 if key == SLOW_MOVING_KEY else 3.0)
   else:

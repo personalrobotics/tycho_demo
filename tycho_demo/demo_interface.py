@@ -72,6 +72,8 @@ class State(object):
     }
     self.state_cam = None
     self.tactile = None
+    self.align = None
+    self.reset = False
 
     # For feedback
     self.current_position = np.empty(arm.dof_count, dtype=np.float64)
@@ -288,7 +290,11 @@ def command_proc(state):
       state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target))
       if state.state_cam is not None:
         if state.tactile is not None:
-          state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam,state.tactile))
+          if state.t265_left is not None:
+            state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, \
+              choppose_target,state.state_cam,state.tactile, state.t265_left, state.t265_right))
+          else:
+            state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam,state.tactile))
         else:
           state.log_queue.put((ee_pose, state.tracked_objs["ball"], rigidbody, choppose_target,state.state_cam))
 
@@ -353,13 +359,36 @@ def tactile_read_loop(state):
 def t265_read_loop(state):
   last = time()
   while True:
-      lastData = state.t265._read()
-      # print(1/(time() - last))
-      last = time()
-      if lastData is None:
-          continue
-      else:
-          state.t265_4x4 = lastData
+    if state.params['tool_name'] == 'tong':
+      lastData_teleop1 = state.t265_teleop1._read()
+    lastData_teleop = state.t265_teleop._read()
+    lastData_robot = state.t265_robot._read()
+    # print(1/(time() - last))
+    last = time()
+    if lastData_teleop[0] is None or lastData_robot[1] is None:
+        continue
+    else:
+        state.t265_4x4 = lastData_teleop[0]
+        state.t265_left = lastData_robot[1]
+        state.t265_right = lastData_robot[2]
+        if state.params['tool_name'] == 'tong':
+          R1= lastData_teleop1[0]
+          R2 = lastData_teleop[0]
+          if state.align is None or state.reset:
+              state.align = R1 @ R2.T
+              state.reset = False
+          R2_aligned = state.align @ R2
+          R_rel = R2_aligned @ R1.T
+          rot_deg = state.t265_teleop._quat_angle_deg_from_R(R_rel)
+          # print_and_cr(f'grasping:{rot_deg}')
+          # close -0.45# open -2.19
+          state.t265_diff = -2.19+0.165714*(rot_deg-0.5)
+def close_sensor(state):
+  state.tactile_read_thread.join()
+  state.t265_read_thread.join()
+  state.t265_teleop1.pipe.stop()
+  state.t265_teleop.pipe.stop()
+  state.t265_robot.pipe.stop()
 ###########################################################
 # Key Press Handler
 ###########################################################
@@ -507,21 +536,17 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   # cur_time = time()
   def azcam_cb(msg):
     global cnt,cur_time
-    img = imgMsgToImg(msg)[140:430,200:620,:]
+    # img = imgMsgToImg(msg)[140:430,200:620,:]
     # print(img.shape)
     # img = imgMsgToImg(msg)[140:430,200:620,:]
-    # img = imgMsgToImg(msg)[140:630,300:920,:]
-    # img = imgMsgToImg(msg)[0:-250,200:-500,:]
-    # cv2.imshow("shubham", img[:, :, ::-1])
+
+    img = imgMsgToImg(msg)[170:530,310:900,:]
+    # img = imgMsgToImg(msg)[100:900,100:900,:]
+
+    # turn on/off rqt camera
+    # cv2.imshow("shu/bham", img[:, :, ::-1])
     # cv2.waitKey(1)
-    # img = imgMsgToImg(msg)[140:430,200:620,:]
-    # print(img.shape)
-    # height, width = img.shape[:2]
-    # new_width = 640
-    # aspect_ratio = width / height
-    # new_height = int(new_width / aspect_ratio)
-    # img = cv2.resize(img, (new_width, new_height))
-    # print(img.shape)
+
     # cv2.imwrite("/home/prl/tmp/"+f"{time()}.png", img[:,:,::-1])
     # print("here:",time()-cur_time)
     # cnt += 1
@@ -533,13 +558,20 @@ def run_demo(callback_func=None, params=None, cmd_freq=0):
   if state.params['record_tactile']:
     state.tactile_sensor = TouchSensor()
     sleep(1)
-    tactile_read_thread = Thread(target=tactile_read_loop, args=(state,))
-    tactile_read_thread.start()
+    state.tactile_read_thread = Thread(target=tactile_read_loop, args=(state,))
+    state.tactile_read_thread.start()
   if state.params['use_t265']:
-    state.t265 = T265_streaming()
-    t265_read_thread = Thread(target=t265_read_loop, args=(state,))
-    t265_read_thread.start()
-
+    state.t265_teleop = T265_streaming(serial_number="929122111689",enable_fisheye=False) #white clamp
+    if state.params['tool_name'] == 'tong':
+      state.t265_robot = T265_streaming(serial_number="925122110613",enable_fisheye=True) 
+      state.t265_teleop1 = T265_streaming(serial_number="929122110141",enable_fisheye=False) #black clamp
+    elif state.params['tool_name'] == 'brush':
+      state.t265_robot = T265_streaming(serial_number="929122111169",enable_fisheye=True)
+    elif state.params['tool_name'] == 'knife':
+      state.t265_robot = T265_streaming(serial_number="925122110996",enable_fisheye=True)
+    state.t265_read_thread = Thread(target=t265_read_loop, args=(state,))
+    state.t265_read_thread.start()
+  state.onclose.append(close_sensor)
 
 
   # Set command frequency

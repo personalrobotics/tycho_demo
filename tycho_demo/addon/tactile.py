@@ -14,7 +14,7 @@ class TouchSensor():
 
     def connect_port(self):
         # Setup input
-        self.ser = serial.Serial('/dev/ttyUSB0', baudrate=2000000, timeout=1.0)
+        self.ser = serial.Serial('/dev/ttyUSB2', baudrate=2000000, timeout=1.0)
         assert self.ser.is_open, 'Failed to open COM port!'
         self.readPressure() #warm up
 
@@ -51,6 +51,6 @@ class TouchSensor():
         if pressure is None:
             return None
 
-        # print(pressure[9:14,15:18])
+      # print(pressure[24:32,0:8])
         return pressure.copy()
         # return {'pressure': pressure}
